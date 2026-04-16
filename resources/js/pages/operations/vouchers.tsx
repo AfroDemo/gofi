@@ -1,13 +1,15 @@
 import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatDateTime, formatMinutes, formatMoney } from '@/lib/formatters';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { CircleCheckBig, Clock3, RectangleEllipsis, Ticket, TicketSlash } from 'lucide-react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { CircleCheckBig, Clock3, PencilLine, Plus, RectangleEllipsis, Ticket, TicketSlash, WandSparkles } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -81,6 +83,8 @@ const statusTone: Record<string, string> = {
 };
 
 export default function Vouchers({ viewer, filters, summary, profiles, vouchers }: VouchersPageProps) {
+    const { flash } = usePage<SharedData>().props;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vouchers" />
@@ -90,6 +94,23 @@ export default function Vouchers({ viewer, filters, summary, profiles, vouchers 
                     description="Voucher inventory is one of the most practical offline-friendly flows in Go-Fi. These screens already read from the real voucher, voucher profile, package, and branch records."
                     viewer={viewer}
                 />
+
+                {flash?.success && (
+                    <Alert className="border-emerald-500/30 bg-emerald-500/5 text-emerald-900 dark:text-emerald-100">
+                        <CircleCheckBig className="size-4" />
+                        <AlertTitle>Voucher workflow updated</AlertTitle>
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="flex justify-end">
+                    <Button asChild className="rounded-xl">
+                        <Link href={route('voucher-profiles.create')}>
+                            <Plus className="size-4" />
+                            New voucher profile
+                        </Link>
+                    </Button>
+                </div>
 
                 <OpsFilters
                     search={filters.search}
@@ -166,6 +187,20 @@ export default function Vouchers({ viewer, filters, summary, profiles, vouchers 
                                         <div className="text-left xl:text-right">
                                             <p className="text-lg font-semibold">{formatMoney(profile.price, profile.currency)}</p>
                                             <p className="text-muted-foreground text-sm">{profile.total_count} vouchers created</p>
+                                            <div className="mt-3 flex flex-wrap gap-2 xl:justify-end">
+                                                <Button asChild variant="outline" size="sm" className="rounded-lg">
+                                                    <Link href={route('voucher-profiles.edit', profile.id)}>
+                                                        <PencilLine className="size-4" />
+                                                        Edit
+                                                    </Link>
+                                                </Button>
+                                                <Button asChild size="sm" className="rounded-lg">
+                                                    <Link href={route('voucher-batches.create', profile.id)}>
+                                                        <WandSparkles className="size-4" />
+                                                        Generate batch
+                                                    </Link>
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
 
