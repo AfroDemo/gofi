@@ -33,6 +33,9 @@ class PortalFlowTest extends TestCase
                 ->component('portal/show', false)
                 ->where('tenant.name', 'CoastFi Networks')
                 ->where('branch.name', 'Kariakoo Hub')
+                ->where('support.contact_name', 'Amina Juma')
+                ->where('support.contact_role', 'Branch manager')
+                ->has('guidance', 4)
                 ->has('packages', 1)
                 ->where('packages.0.name', 'Coast Quick Hour')
             );
@@ -96,6 +99,7 @@ class PortalFlowTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('portal/transaction-status', false)
                 ->where('transaction.reference', 'PRT-DIAG-100')
+                ->where('support.contact_name', 'Amina Juma')
                 ->where('transaction.state_hint', 'stale_pending')
                 ->where('transaction.pending_age_minutes', fn ($value) => is_int($value) && $value >= 8)
                 ->where('transaction.payment.gateway', 'palmpesa')

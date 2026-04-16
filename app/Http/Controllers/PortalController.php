@@ -68,6 +68,8 @@ class PortalController extends Controller
                 'location' => $branch->location,
                 'address' => $branch->address,
             ],
+            'support' => $this->supportPayload($tenant, $branch),
+            'guidance' => $this->portalGuidance($tenant, $branch),
             'packages' => $packages,
         ]);
     }
@@ -322,6 +324,8 @@ class PortalController extends Controller
                 'code' => $branch->code,
                 'location' => $branch->location,
             ],
+            'support' => $this->supportPayload($tenant, $branch),
+            'guidance' => $this->portalGuidance($tenant, $branch),
             'transaction' => [
                 'reference' => $transaction->reference,
                 'source' => $transaction->source->value,
@@ -438,11 +442,13 @@ class PortalController extends Controller
     protected function resolvePortalWorkspace(string $tenantSlug, string $branchCode): array
     {
         $tenant = Tenant::query()
+            ->with(['owner:id,name,email'])
             ->where('slug', $tenantSlug)
             ->where('status', TenantStatus::Active)
             ->firstOrFail();
 
         $branch = Branch::query()
+            ->with(['manager:id,name,email'])
             ->where('tenant_id', $tenant->id)
             ->where('code', Str::upper($branchCode))
             ->where('status', BranchStatus::Active)
@@ -513,5 +519,28 @@ class PortalController extends Controller
         $base = is_array($metadata) ? $metadata : [];
 
         return array_replace_recursive($base, $additions);
+    }
+
+    protected function supportPayload(Tenant $tenant, Branch $branch): array
+    {
+        $contact = $branch->manager ?? $tenant->owner;
+
+        return [
+            'network_name' => $tenant->name.' '.$branch->code.' hotspot',
+            'contact_name' => $contact?->name,
+            'contact_email' => $contact?->email,
+            'contact_role' => $branch->manager ? 'Branch manager' : 'Tenant owner',
+            'branch_label' => $branch->location ? "{$branch->name}, {$branch->location}" : $branch->name,
+        ];
+    }
+
+    protected function portalGuidance(Tenant $tenant, Branch $branch): array
+    {
+        return [
+            'Use a mobile-money number in country-code format when possible so payment follow-up is easier.',
+            'Keep the transaction reference if the payment stays pending and support needs to trace the callback.',
+            'If the prompt does not arrive after a few minutes, ask branch support to verify the hotspot and payment status before retrying.',
+            'Voucher fallback is useful when the customer already has a printed code or mobile-money coverage is unstable.',
+        ];
     }
 }

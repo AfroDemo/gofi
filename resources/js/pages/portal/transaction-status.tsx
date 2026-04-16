@@ -66,6 +66,14 @@ interface TransactionInfo {
 interface PortalTransactionStatusProps {
     tenant: TenantInfo;
     branch: BranchInfo;
+    support: {
+        network_name: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_role: string;
+        branch_label: string;
+    };
+    guidance: string[];
     transaction: TransactionInfo;
 }
 
@@ -80,7 +88,7 @@ const tone: Record<string, string> = {
     expired: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
-export default function PortalTransactionStatus({ tenant, branch, transaction }: PortalTransactionStatusProps) {
+export default function PortalTransactionStatus({ tenant, branch, support, guidance, transaction }: PortalTransactionStatusProps) {
     const { flash } = usePage<SharedData>().props;
 
     const primaryMessage =
@@ -164,6 +172,15 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
 
                             <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{transaction.reference}</h1>
                             <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-7 sm:text-base">{primaryMessage}</p>
+
+                            <div className="mt-5 rounded-2xl border border-dashed px-4 py-4">
+                                <p className="text-muted-foreground text-xs font-semibold tracking-[0.2em] uppercase">Branch support</p>
+                                <p className="mt-2 font-medium">{support.contact_name || 'Support team'}</p>
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                    {support.contact_role}
+                                    {support.contact_email ? ` • ${support.contact_email}` : ''}
+                                </p>
+                            </div>
 
                             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                 <div className="gofi-surface px-4 py-4">
@@ -300,6 +317,17 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                                 <p className="mt-2 font-medium">{value}</p>
                                             </div>
                                         ))}
+                                    </div>
+
+                                    <div className="rounded-2xl border border-dashed px-4 py-4">
+                                        <p className="font-medium">Customer guidance</p>
+                                        <div className="mt-3 space-y-2">
+                                            {guidance.slice(0, 3).map((item, index) => (
+                                                <p key={`${index}-${item}`} className="text-muted-foreground text-sm leading-6">
+                                                    {item}
+                                                </p>
+                                            ))}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

@@ -38,10 +38,18 @@ interface PackageCard {
 interface PortalShowProps {
     tenant: TenantInfo;
     branch: BranchInfo;
+    support: {
+        network_name: string;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_role: string;
+        branch_label: string;
+    };
+    guidance: string[];
     packages: PackageCard[];
 }
 
-export default function PortalShow({ tenant, branch, packages }: PortalShowProps) {
+export default function PortalShow({ tenant, branch, support, guidance, packages }: PortalShowProps) {
     const { flash } = usePage<SharedData>().props;
     const checkoutForm = useForm({
         package_id: packages[0]?.id?.toString() ?? '',
@@ -131,6 +139,12 @@ export default function PortalShow({ tenant, branch, packages }: PortalShowProps
                                     This portal is branch-aware, mobile-money ready, and designed for quick customer activation on low-end mobile browsers.
                                 </p>
 
+                                <div className="mt-5 rounded-2xl border border-dashed px-4 py-4">
+                                    <p className="text-muted-foreground text-xs font-semibold tracking-[0.2em] uppercase">Hotspot identity</p>
+                                    <p className="mt-2 font-medium">{support.network_name}</p>
+                                    <p className="text-muted-foreground mt-1 text-sm">{support.branch_label}</p>
+                                </div>
+
                                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                                     <div className="gofi-surface px-4 py-4">
                                         <div className="flex items-start gap-3">
@@ -162,19 +176,23 @@ export default function PortalShow({ tenant, branch, packages }: PortalShowProps
 
                             <Card className="border-border/70 bg-card/88 backdrop-blur">
                                 <CardHeader>
-                                    <CardTitle>How this hotspot works</CardTitle>
-                                    <CardDescription>Use whichever path fits the customer at the point of sale.</CardDescription>
+                                    <CardTitle>Branch help and guidance</CardTitle>
+                                    <CardDescription>Use whichever payment path fits the customer, and know who to contact if the flow gets stuck.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {[
-                                        ['Choose a package', 'Pick a branch offer with the right time or data shape for this customer.'],
-                                        ['Confirm payment', 'Enter the customer number and wait for the mobile-money approval prompt.'],
-                                        ['Use voucher fallback', 'If the customer already has a code, redeem it instantly here.'],
-                                    ].map(([title, description], index) => (
-                                        <div key={title} className="border-border/60 rounded-2xl border px-4 py-4">
+                                    <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                        <p className="font-medium">Support contact</p>
+                                        <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                            {support.contact_name || 'Branch support team'}
+                                            {support.contact_email ? ` • ${support.contact_email}` : ''}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-sm">{support.contact_role}</p>
+                                    </div>
+
+                                    {guidance.map((item, index) => (
+                                        <div key={`${index}-${item}`} className="border-border/60 rounded-2xl border px-4 py-4">
                                             <p className="text-primary text-xs font-semibold tracking-[0.22em] uppercase">Step 0{index + 1}</p>
-                                            <p className="mt-2 font-medium">{title}</p>
-                                            <p className="text-muted-foreground mt-1 text-sm leading-6">{description}</p>
+                                            <p className="mt-2 text-sm leading-6">{item}</p>
                                         </div>
                                     ))}
                                 </CardContent>
