@@ -1,13 +1,15 @@
 import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatMinutes, formatMoney, formatSpeed } from '@/lib/formatters';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { BadgeDollarSign, Boxes, MapPinned, RadioTower, TicketPercent } from 'lucide-react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { BadgeDollarSign, Boxes, CircleCheckBig, MapPinned, PencilLine, Plus, RadioTower, TicketPercent } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -66,6 +68,8 @@ interface PackagesPageProps {
 }
 
 export default function Packages({ viewer, filters, summary, typeMix, packages }: PackagesPageProps) {
+    const { flash } = usePage<SharedData>().props;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Packages" />
@@ -75,6 +79,23 @@ export default function Packages({ viewer, filters, summary, typeMix, packages }
                     description="Real package inventory from the live Go-Fi domain model. This is where duration, data cap, speed profile, branch availability, and sales performance begin to converge."
                     viewer={viewer}
                 />
+
+                {flash?.success && (
+                    <Alert className="border-emerald-500/30 bg-emerald-500/5 text-emerald-900 dark:text-emerald-100">
+                        <CircleCheckBig className="size-4" />
+                        <AlertTitle>Package workflow updated</AlertTitle>
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="flex justify-end">
+                    <Button asChild className="rounded-xl">
+                        <Link href={route('packages.create')}>
+                            <Plus className="size-4" />
+                            New package
+                        </Link>
+                    </Button>
+                </div>
 
                 <OpsFilters
                     search={filters.search}
@@ -174,6 +195,12 @@ export default function Packages({ viewer, filters, summary, typeMix, packages }
                                             <p className="text-muted-foreground text-sm">
                                                 {formatMoney(item.successful_revenue, item.currency)} confirmed revenue
                                             </p>
+                                            <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
+                                                <Link href={route('packages.edit', item.id)}>
+                                                    <PencilLine className="size-4" />
+                                                    Edit
+                                                </Link>
+                                            </Button>
                                         </div>
                                     </div>
 
