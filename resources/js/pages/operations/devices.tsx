@@ -28,12 +28,14 @@ interface Summary {
     offline: number;
     provisioning: number;
     branches_covered: number;
+    open_incidents: number;
 }
 
 interface DeviceRow {
     id: number;
     tenant: string | null;
     branch: string | null;
+    branch_status: string | null;
     location: string | null;
     name: string;
     identifier: string;
@@ -41,6 +43,8 @@ interface DeviceRow {
     integration_driver: string;
     ip_address: string | null;
     last_seen_at: string | null;
+    open_incidents_count: number;
+    attention_reason: string | null;
     metadata: Record<string, unknown> | null;
 }
 
@@ -49,6 +53,7 @@ interface DevicesPageProps {
     filters: {
         search: string;
         status: string;
+        attention: string;
     };
     summary: Summary;
     devices: DeviceRow[];
@@ -74,7 +79,7 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                 <OpsFilters
                     search={filters.search}
                     searchPlaceholder="Search device name, identifier, branch, tenant, driver, or IP address"
-                    values={{ status: filters.status }}
+                    values={{ status: filters.status, attention: filters.attention }}
                     fields={[
                         {
                             key: 'status',
@@ -87,6 +92,17 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                 { label: 'Provisioning', value: 'provisioning' },
                             ],
                         },
+                        {
+                            key: 'attention',
+                            label: 'Attention',
+                            placeholder: 'All devices',
+                            options: [
+                                { label: 'All devices', value: 'all' },
+                                { label: 'Needs review', value: 'review' },
+                                { label: 'Open incidents', value: 'open_incidents' },
+                                { label: 'Offline only', value: 'offline' },
+                            ],
+                        },
                     ]}
                     resultLabel={`${devices.length} device matches in the current workspace.`}
                 />
@@ -95,7 +111,8 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                     <OpsStatCard label="Total devices" value={summary.total.toString()} hint="Routers and hotspot endpoints visible in scope." icon={Router} />
                     <OpsStatCard label="Online" value={summary.online.toString()} hint="Devices currently reporting in." icon={RadioTower} />
                     <OpsStatCard label="Offline" value={summary.offline.toString()} hint="Branch-side equipment that may block customer access." icon={CircleOff} />
-                    <OpsStatCard label="Provisioning" value={summary.provisioning.toString()} hint="Devices not fully ready for live operations yet." icon={Wrench} />
+                    <OpsStatCard label="Open incidents" value={summary.open_incidents.toString()} hint="Hardware issues that still need operator follow-up." icon={Wrench} />
+                    <OpsStatCard label="Provisioning" value={summary.provisioning.toString()} hint="Devices not fully ready for live operations yet." icon={Router} />
                     <OpsStatCard label="Branches covered" value={summary.branches_covered.toString()} hint="How many branches have visible hardware." icon={MapPinned} />
                 </section>
 
@@ -128,6 +145,9 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                             Driver: {device.integration_driver}
                                             {device.ip_address ? ` • ${device.ip_address}` : ' • No IP recorded'}
                                         </p>
+                                        {device.attention_reason && (
+                                            <p className="text-sm text-amber-700 dark:text-amber-300">{device.attention_reason}</p>
+                                        )}
                                     </div>
 
                                     <div className="text-left xl:text-right">
@@ -151,12 +171,18 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                         </p>
                                     </div>
                                     <div className="bg-muted/45 rounded-xl px-3 py-3">
-                                        <p className="text-muted-foreground text-xs uppercase">Driver</p>
-                                        <p className="mt-2 font-medium">{device.integration_driver}</p>
+                                        <p className="text-muted-foreground text-xs uppercase">Branch context</p>
+                                        <p className="mt-2 font-medium">
+                                            {device.branch_status ? `${device.branch_status} branch` : 'Branch status unavailable'}
+                                        </p>
                                     </div>
                                     <div className="bg-muted/45 rounded-xl px-3 py-3">
                                         <p className="text-muted-foreground text-xs uppercase">Firmware / metadata</p>
-                                        <p className="mt-2 font-medium">{String(device.metadata?.firmware ?? 'No metadata')}</p>
+                                        <p className="mt-2 font-medium">
+                                            {device.open_incidents_count > 0
+                                                ? `${device.open_incidents_count} open incident${device.open_incidents_count === 1 ? '' : 's'}`
+                                                : String(device.metadata?.firmware ?? 'No metadata')}
+                                        </p>
                                     </div>
                                 </div>
                             </div>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\HotspotDevice;
@@ -22,6 +23,9 @@ class DeviceIndexController extends Controller
             'status' => in_array($request->string('status')->toString(), ['all', 'online', 'offline', 'provisioning'], true)
                 ? $request->string('status')->toString()
                 : 'all',
+            'attention' => in_array($request->string('attention')->toString(), ['all', 'review', 'open_incidents', 'offline'], true)
+                ? $request->string('attention')->toString()
+                : 'all',
         ];
 
         $devices = HotspotDevice::query()
@@ -40,7 +44,23 @@ class DeviceIndexController extends Controller
                 });
             })
             ->when($filters['status'] !== 'all', fn (Builder $query) => $query->where('status', $filters['status']))
-            ->with(['tenant:id,name,currency', 'branch:id,name,location'])
+            ->when($filters['attention'] === 'open_incidents', function (Builder $query) {
+                $query->whereHas('incidents', fn (Builder $incidents) => $incidents->where('status', DeviceIncidentStatus::Open));
+            })
+            ->when($filters['attention'] === 'offline', function (Builder $query) {
+                $query->where('status', DeviceStatus::Offline);
+            })
+            ->when($filters['attention'] === 'review', function (Builder $query) {
+                $query->where(function (Builder $nested) {
+                    $nested
+                        ->where('status', DeviceStatus::Offline->value)
+                        ->orWhereHas('incidents', fn (Builder $incidents) => $incidents->where('status', DeviceIncidentStatus::Open));
+                });
+            })
+            ->with(['tenant:id,name,currency', 'branch:id,name,location,status'])
+            ->withCount([
+                'incidents as open_incidents_count' => fn (Builder $query) => $query->where('status', DeviceIncidentStatus::Open),
+            ])
             ->orderBy('name')
             ->get();
 
@@ -53,11 +73,13 @@ class DeviceIndexController extends Controller
                 'offline' => $devices->where('status', DeviceStatus::Offline)->count(),
                 'provisioning' => $devices->where('status', DeviceStatus::Provisioning)->count(),
                 'branches_covered' => $devices->pluck('branch_id')->filter()->unique()->count(),
+                'open_incidents' => (int) $devices->sum('open_incidents_count'),
             ],
             'devices' => $devices->map(fn (HotspotDevice $device) => [
                 'id' => $device->id,
                 'tenant' => $device->tenant?->name,
                 'branch' => $device->branch?->name,
+                'branch_status' => $device->branch?->status?->value,
                 'location' => $device->branch?->location,
                 'name' => $device->name,
                 'identifier' => $device->identifier,
@@ -65,8 +87,19 @@ class DeviceIndexController extends Controller
                 'integration_driver' => $device->integration_driver,
                 'ip_address' => $device->ip_address,
                 'last_seen_at' => $device->last_seen_at?->toIso8601String(),
+                'open_incidents_count' => (int) $device->open_incidents_count,
+                'attention_reason' => $this->attentionReason($device),
                 'metadata' => $device->metadata,
             ])->values(),
         ]);
+    }
+
+    protected function attentionReason(HotspotDevice $device): ?string
+    {
+        return match (true) {
+            (int) $device->open_incidents_count > 0 => 'This device has unresolved incidents that may affect customer access.',
+            $device->status === DeviceStatus::Offline => 'This device is offline and may block portal access for the branch.',
+            default => null,
+        };
     }
 }

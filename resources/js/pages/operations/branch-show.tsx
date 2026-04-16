@@ -1,5 +1,6 @@
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FollowUpNotesPanel, type FollowUpNoteRow } from '@/components/ops/follow-up-notes-panel';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -104,6 +105,7 @@ interface BranchShowProps {
     recent_transactions: RecentTransaction[];
     recent_sessions: RecentSession[];
     recent_incidents: RecentIncident[];
+    notes: FollowUpNoteRow[];
 }
 
 const tone: Record<string, string> = {
@@ -133,11 +135,15 @@ export default function BranchShow({
     recent_transactions,
     recent_sessions,
     recent_incidents,
+    notes,
 }: BranchShowProps) {
     const { flash } = usePage<SharedData>().props;
     const form = useForm({
         status: status_options.find((option) => option.value !== branch.status)?.value ?? branch.status,
         reason: '',
+    });
+    const noteForm = useForm({
+        note: '',
     });
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -148,6 +154,14 @@ export default function BranchShow({
     const submit = (event: FormEvent) => {
         event.preventDefault();
         form.post(route('branches.update-status', branch.id));
+    };
+
+    const submitNote = (event: FormEvent) => {
+        event.preventDefault();
+        noteForm.post(route('branches.notes.store', branch.id), {
+            preserveScroll: true,
+            onSuccess: () => noteForm.reset(),
+        });
     };
 
     return (
@@ -291,6 +305,18 @@ export default function BranchShow({
                         </CardContent>
                     </Card>
                 </section>
+
+                <FollowUpNotesPanel
+                    title="Operator follow-up notes"
+                    description="Capture who picked this up, what was checked, and what still needs attention so branch work does not rely on memory."
+                    notes={notes}
+                    note={noteForm.data.note}
+                    onNoteChange={(value) => noteForm.setData('note', value)}
+                    onSubmit={submitNote}
+                    error={noteForm.errors.note}
+                    processing={noteForm.processing}
+                    emptyMessage="No follow-up notes have been recorded for this branch yet."
+                />
 
                 <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
                     <Card className="border-border/70">

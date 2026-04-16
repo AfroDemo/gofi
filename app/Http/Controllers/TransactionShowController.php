@@ -32,6 +32,8 @@ class TransactionShowController extends Controller
                 'hotspotSessions.branch:id,name',
                 'hotspotSessions.accessPackage:id,name',
                 'ledgerEntries:id,tenant_id,transaction_id,direction,entry_type,amount,currency,balance_after,description,posted_at',
+                'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
+                'operatorNotes.author:id,name,email',
             ])
             ->findOrFail($transaction->id);
         $paymentMetadata = is_array($transaction->metadata) ? ($transaction->metadata['payment'] ?? []) : [];
@@ -136,6 +138,19 @@ class TransactionShowController extends Controller
                         'description' => $entry->description,
                         'posted_at' => $entry->posted_at?->toIso8601String(),
                     ]),
+                'notes' => $transaction->operatorNotes
+                    ->sortByDesc('created_at')
+                    ->values()
+                    ->map(fn ($note) => [
+                        'id' => $note->id,
+                        'note' => $note->note,
+                        'created_at' => $note->created_at?->toIso8601String(),
+                        'author' => $note->author ? [
+                            'name' => $note->author->name,
+                            'email' => $note->author->email,
+                        ] : null,
+                    ])
+                    ->all(),
             ],
         ]);
     }

@@ -82,6 +82,19 @@ class OperationsPagesTest extends TestCase
             );
 
         $this->actingAs($owner)
+            ->get('/branches')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/branches', false)
+                ->where('viewer.scope', 'tenant')
+                ->where('summary.total', 2)
+                ->where('summary.unavailable', 1)
+                ->where('summary.open_incidents', 1)
+                ->has('branches', 2)
+                ->where('branches.0.tenant', 'CoastFi Networks')
+            );
+
+        $this->actingAs($owner)
             ->get('/devices')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -90,6 +103,7 @@ class OperationsPagesTest extends TestCase
                 ->where('summary.total', 2)
                 ->where('summary.online', 1)
                 ->where('summary.offline', 1)
+                ->where('summary.open_incidents', 1)
                 ->has('devices', 2)
                 ->where('devices.0.tenant', 'CoastFi Networks')
             );
@@ -149,6 +163,18 @@ class OperationsPagesTest extends TestCase
             );
 
         $this->actingAs($owner)
+            ->get('/branches?attention=review')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/branches', false)
+                ->where('filters.attention', 'review')
+                ->where('summary.unavailable', 1)
+                ->where('summary.open_incidents', 1)
+                ->has('branches', 1)
+                ->where('branches.0.code', 'MWG')
+            );
+
+        $this->actingAs($owner)
             ->get('/devices?status=offline')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -157,6 +183,18 @@ class OperationsPagesTest extends TestCase
                 ->where('summary.offline', 1)
                 ->has('devices', 1)
                 ->where('devices.0.identifier', 'MWG-RTR-01')
+            );
+
+        $this->actingAs($owner)
+            ->get('/devices?attention=open_incidents')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/devices', false)
+                ->where('filters.attention', 'open_incidents')
+                ->where('summary.open_incidents', 1)
+                ->has('devices', 1)
+                ->where('devices.0.identifier', 'MWG-RTR-01')
+                ->where('devices.0.open_incidents_count', 1)
             );
 
         $this->actingAs($owner)

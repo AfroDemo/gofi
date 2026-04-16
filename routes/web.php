@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\BranchIndexController;
 use App\Http\Controllers\BranchManagementController;
+use App\Http\Controllers\BranchNoteStoreController;
 use App\Http\Controllers\BranchShowController;
 use App\Http\Controllers\BranchStatusUpdateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceIncidentResolveController;
 use App\Http\Controllers\DeviceIncidentStoreController;
 use App\Http\Controllers\DeviceIndexController;
+use App\Http\Controllers\DeviceNoteStoreController;
 use App\Http\Controllers\DeviceShowController;
 use App\Http\Controllers\PackageIndexController;
 use App\Http\Controllers\PackageManagementController;
@@ -18,6 +20,7 @@ use App\Http\Controllers\SessionTerminationController;
 use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
+use App\Http\Controllers\TransactionNoteStoreController;
 use App\Http\Controllers\TransactionShowController;
 use App\Http\Controllers\TransactionStatusRefreshController;
 use App\Http\Controllers\VoucherBatchController;
@@ -49,6 +52,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('branches/create', [BranchManagementController::class, 'create'])->name('branches.create');
     Route::post('branches', [BranchManagementController::class, 'store'])->name('branches.store');
     Route::post('branches/{branch}/status', BranchStatusUpdateController::class)->name('branches.update-status');
+    Route::post('branches/{branch}/notes', BranchNoteStoreController::class)->name('branches.notes.store');
     Route::get('branches/{branch}', BranchShowController::class)->name('branches.show');
     Route::get('branches/{branch}/edit', [BranchManagementController::class, 'edit'])->name('branches.edit');
     Route::patch('branches/{branch}', [BranchManagementController::class, 'update'])->name('branches.update');
@@ -67,11 +71,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('devices', DeviceIndexController::class)->name('devices.index');
     Route::post('devices/{device}/incidents', DeviceIncidentStoreController::class)->name('devices.incidents.store');
     Route::post('devices/{device}/incidents/{incident}/resolve', DeviceIncidentResolveController::class)->name('devices.incidents.resolve');
+    Route::post('devices/{device}/notes', DeviceNoteStoreController::class)->name('devices.notes.store');
     Route::get('devices/{device}', DeviceShowController::class)->name('devices.show');
     Route::get('sessions', SessionIndexController::class)->name('sessions.index');
     Route::post('sessions/{session}/terminate', SessionTerminationController::class)->name('sessions.terminate');
     Route::get('sessions/{session}', SessionShowController::class)->name('sessions.show');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
+    Route::post('transactions/{transaction}/notes', TransactionNoteStoreController::class)->name('transactions.notes.store');
     Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
 });

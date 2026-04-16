@@ -1,4 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FollowUpNotesPanel, type FollowUpNoteRow } from '@/components/ops/follow-up-notes-panel';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -7,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatDateTime, formatMoney } from '@/lib/formatters';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, BadgeDollarSign, CircleAlert, DatabaseZap, HandCoins, Landmark, ReceiptText, RotateCcw } from 'lucide-react';
+import { FormEvent } from 'react';
 
 interface Viewer {
     scope: 'platform' | 'tenant';
@@ -110,6 +112,7 @@ interface TransactionDetail {
     callbacks: CallbackRow[];
     sessions: SessionRow[];
     ledger_entries: LedgerRow[];
+    notes: FollowUpNoteRow[];
 }
 
 interface TransactionShowProps {
@@ -133,11 +136,22 @@ const tone: Record<string, string> = {
 
 export default function TransactionShow({ viewer, transaction }: TransactionShowProps) {
     const { flash } = usePage<SharedData>().props;
+    const noteForm = useForm({
+        note: '',
+    });
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Transactions', href: '/transactions' },
         { title: transaction.reference, href: `/transactions/${transaction.id}` },
     ];
+
+    const submitNote = (event: FormEvent) => {
+        event.preventDefault();
+        noteForm.post(route('transactions.notes.store', transaction.id), {
+            preserveScroll: true,
+            onSuccess: () => noteForm.reset(),
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -407,6 +421,18 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
                         </CardContent>
                     </Card>
                 </section>
+
+                <FollowUpNotesPanel
+                    title="Operator follow-up notes"
+                    description="Record who picked up this payment issue, what checks were done, and what the next action should be."
+                    notes={transaction.notes}
+                    note={noteForm.data.note}
+                    onNoteChange={(value) => noteForm.setData('note', value)}
+                    onSubmit={submitNote}
+                    error={noteForm.errors.note}
+                    processing={noteForm.processing}
+                    emptyMessage="No follow-up notes have been recorded for this transaction yet."
+                />
 
                 <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
                     <Card className="border-border/70">

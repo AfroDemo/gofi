@@ -1,3 +1,4 @@
+import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -8,7 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatMoney } from '@/lib/formatters';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, CircleCheckBig, MapPinned, PencilLine, Plus, Router, Store } from 'lucide-react';
+import { Activity, CircleCheckBig, MapPinned, PencilLine, Plus, Router, ShieldAlert, Store, Wrench } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -25,9 +26,17 @@ interface Viewer {
 interface Summary {
     total: number;
     active: number;
+    unavailable: number;
     online_devices: number;
+    open_incidents: number;
     active_sessions: number;
     successful_revenue: number;
+}
+
+interface Filters {
+    search: string;
+    status: string;
+    attention: string;
 }
 
 interface BranchRow {
@@ -42,13 +51,17 @@ interface BranchRow {
     manager_email: string | null;
     devices_count: number;
     online_devices_count: number;
+    open_incidents_count: number;
     active_sessions_count: number;
+    stale_pending_transactions_count: number;
     successful_revenue: number;
     currency: string | null;
+    attention_reason: string | null;
 }
 
 interface BranchesPageProps {
     viewer: Viewer;
+    filters: Filters;
     summary: Summary;
     branches: BranchRow[];
 }
@@ -59,7 +72,7 @@ const tone: Record<string, string> = {
     inactive: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
-export default function Branches({ viewer, summary, branches }: BranchesPageProps) {
+export default function Branches({ viewer, filters, summary, branches }: BranchesPageProps) {
     const { flash } = usePage<SharedData>().props;
 
     return (
@@ -79,6 +92,37 @@ export default function Branches({ viewer, summary, branches }: BranchesPageProp
                         <AlertDescription>{flash.success}</AlertDescription>
                     </Alert>
                 )}
+
+                <OpsFilters
+                    search={filters.search}
+                    searchPlaceholder="Search branch name, code, location, manager, tenant, or address"
+                    values={{ status: filters.status, attention: filters.attention }}
+                    fields={[
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            placeholder: 'All statuses',
+                            options: [
+                                { label: 'All statuses', value: 'all' },
+                                { label: 'Active', value: 'active' },
+                                { label: 'Maintenance', value: 'maintenance' },
+                                { label: 'Inactive', value: 'inactive' },
+                            ],
+                        },
+                        {
+                            key: 'attention',
+                            label: 'Attention',
+                            placeholder: 'All branches',
+                            options: [
+                                { label: 'All branches', value: 'all' },
+                                { label: 'Needs review', value: 'review' },
+                                { label: 'Unavailable only', value: 'unavailable' },
+                                { label: 'Open incidents', value: 'open_incidents' },
+                            ],
+                        },
+                    ]}
+                    resultLabel={`${branches.length} branch matches in the current workspace.`}
+                />
 
                 <div className="flex justify-end">
                     <Button asChild className="rounded-xl">
@@ -101,6 +145,18 @@ export default function Branches({ viewer, summary, branches }: BranchesPageProp
                         value={summary.active.toString()}
                         hint="Branches currently marked as active."
                         icon={MapPinned}
+                    />
+                    <OpsStatCard
+                        label="Unavailable"
+                        value={summary.unavailable.toString()}
+                        hint="Branches in maintenance or inactive status."
+                        icon={ShieldAlert}
+                    />
+                    <OpsStatCard
+                        label="Open incidents"
+                        value={summary.open_incidents.toString()}
+                        hint="Unresolved device incidents across visible branches."
+                        icon={Wrench}
                     />
                     <OpsStatCard
                         label="Online devices"
@@ -152,6 +208,9 @@ export default function Branches({ viewer, summary, branches }: BranchesPageProp
                                             Manager: {branch.manager ?? 'Unassigned'}
                                             {branch.manager_email ? ` • ${branch.manager_email}` : ''}
                                         </p>
+                                        {branch.attention_reason && (
+                                            <p className="text-sm text-amber-700 dark:text-amber-300">{branch.attention_reason}</p>
+                                        )}
                                     </div>
                                     <div className="text-left xl:text-right">
                                         <p className="text-lg font-semibold">{formatMoney(branch.successful_revenue, branch.currency)}</p>
@@ -159,6 +218,18 @@ export default function Branches({ viewer, summary, branches }: BranchesPageProp
                                             {branch.online_devices_count}/{branch.devices_count} devices online • {branch.active_sessions_count}{' '}
                                             active sessions
                                         </p>
+                                        <div className="mt-2 flex flex-wrap gap-2 xl:justify-end">
+                                            {branch.open_incidents_count > 0 && (
+                                                <Badge variant="outline" className="bg-rose-500/10 text-rose-700 dark:text-rose-300">
+                                                    {branch.open_incidents_count} open incidents
+                                                </Badge>
+                                            )}
+                                            {branch.stale_pending_transactions_count > 0 && (
+                                                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                                    {branch.stale_pending_transactions_count} stale pending payments
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <div className="mt-3 flex flex-wrap gap-2 xl:justify-end">
                                             <Button asChild variant="outline" size="sm" className="rounded-lg">
                                                 <Link href={route('branches.show', branch.id)}>Open detail</Link>

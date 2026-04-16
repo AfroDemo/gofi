@@ -1,5 +1,6 @@
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FollowUpNotesPanel, type FollowUpNoteRow } from '@/components/ops/follow-up-notes-panel';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -107,6 +108,7 @@ interface DeviceShowProps {
     recent_transactions: RecentTransaction[];
     incident_options: IncidentOption[];
     incidents: IncidentRow[];
+    notes: FollowUpNoteRow[];
 }
 
 const tone: Record<string, string> = {
@@ -166,12 +168,16 @@ export default function DeviceShow({
     recent_transactions,
     incident_options,
     incidents,
+    notes,
 }: DeviceShowProps) {
     const { flash } = usePage<SharedData>().props;
     const incidentForm = useForm({
         title: '',
         severity: incident_options[1]?.value ?? incident_options[0]?.value ?? 'medium',
         details: '',
+    });
+    const noteForm = useForm({
+        note: '',
     });
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -182,6 +188,14 @@ export default function DeviceShow({
     const submitIncident = (event: FormEvent) => {
         event.preventDefault();
         incidentForm.post(route('devices.incidents.store', device.id));
+    };
+
+    const submitNote = (event: FormEvent) => {
+        event.preventDefault();
+        noteForm.post(route('devices.notes.store', device.id), {
+            preserveScroll: true,
+            onSuccess: () => noteForm.reset(),
+        });
     };
 
     return (
@@ -335,6 +349,18 @@ export default function DeviceShow({
                         </CardContent>
                     </Card>
                 </section>
+
+                <FollowUpNotesPanel
+                    title="Operator follow-up notes"
+                    description="Keep a running investigation trail here so hardware follow-up survives shift changes and handoffs."
+                    notes={notes}
+                    note={noteForm.data.note}
+                    onNoteChange={(value) => noteForm.setData('note', value)}
+                    onSubmit={submitNote}
+                    error={noteForm.errors.note}
+                    processing={noteForm.processing}
+                    emptyMessage="No follow-up notes have been recorded for this device yet."
+                />
 
                 <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
                     <Card className="border-border/70">

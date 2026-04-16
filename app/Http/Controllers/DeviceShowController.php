@@ -33,6 +33,8 @@ class DeviceShowController extends Controller
                 'incidents:id,tenant_id,branch_id,hotspot_device_id,reported_by_user_id,resolved_by_user_id,title,details,severity,status,opened_at,resolved_at,resolution_notes',
                 'incidents.reporter:id,name,email',
                 'incidents.resolver:id,name,email',
+                'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
+                'operatorNotes.author:id,name,email',
             ])
             ->findOrFail($device->id);
 
@@ -146,6 +148,19 @@ class DeviceShowController extends Controller
                     ] : null,
                     'can_resolve' => $incident->status === DeviceIncidentStatus::Open,
                 ])->all(),
+            'notes' => $device->operatorNotes
+                ->sortByDesc('created_at')
+                ->values()
+                ->map(fn ($note) => [
+                    'id' => $note->id,
+                    'note' => $note->note,
+                    'created_at' => $note->created_at?->toIso8601String(),
+                    'author' => $note->author ? [
+                        'name' => $note->author->name,
+                        'email' => $note->author->email,
+                    ] : null,
+                ])
+                ->all(),
         ]);
     }
 }

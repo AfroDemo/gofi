@@ -109,6 +109,11 @@ class User extends Authenticatable
         return $this->hasMany(HotspotSession::class, 'authorized_by_user_id');
     }
 
+    public function operatorNotes(): HasMany
+    {
+        return $this->hasMany(OperatorNote::class);
+    }
+
     public function isPlatformAdmin(): bool
     {
         return ($this->platform_role ?? PlatformRole::TenantUser) === PlatformRole::SuperAdmin;

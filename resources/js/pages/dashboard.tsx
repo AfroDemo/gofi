@@ -2,8 +2,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { Activity, Building2, Clock3, Cpu, Landmark, Router, Wallet, type LucideIcon } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Activity, AlertTriangle, ArrowRight, Building2, Clock3, Cpu, Landmark, Router, ShieldAlert, Wallet, Wrench, type LucideIcon } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,6 +25,7 @@ interface Summary {
     branches: number;
     pending_payouts: number;
     pending_transactions: number;
+    escalations: number;
 }
 
 interface RevenueRow {
@@ -62,10 +63,35 @@ interface DeviceStatus {
     provisioning: number;
 }
 
+interface EscalationSummary {
+    total: number;
+    unavailable_branches: number;
+    open_incidents: number;
+    payment_followups: number;
+}
+
+interface EscalationItem {
+    type: 'branch_availability' | 'device_incident' | 'payment_followup';
+    level: string;
+    title: string;
+    description: string;
+    tenant: string | null;
+    branch: string | null;
+    occurred_at: string | null;
+    href: string;
+    action_label: string;
+}
+
+interface Escalations {
+    summary: EscalationSummary;
+    items: EscalationItem[];
+}
+
 interface DashboardProps {
     viewer: Viewer;
     summary: Summary;
     deviceStatus: DeviceStatus;
+    escalations: Escalations;
     revenueRows: RevenueRow[];
     recentTransactions: DashboardTransaction[];
     activeSessions: ActiveSession[];
@@ -94,6 +120,25 @@ const statusTone: Record<string, string> = {
     mobile_money: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
 };
 
+const escalationTone: Record<string, string> = {
+    critical: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    high: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    medium: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    low: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+};
+
+const escalationTypeIcon: Record<EscalationItem['type'], LucideIcon> = {
+    branch_availability: ShieldAlert,
+    device_incident: Wrench,
+    payment_followup: AlertTriangle,
+};
+
+const escalationTypeLabel: Record<EscalationItem['type'], string> = {
+    branch_availability: 'Branch availability',
+    device_incident: 'Device incident',
+    payment_followup: 'Payment follow-up',
+};
+
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: LucideIcon }) {
     return (
         <Card className="border-border/70">
@@ -113,7 +158,7 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
     );
 }
 
-export default function Dashboard({ viewer, summary, deviceStatus, revenueRows, recentTransactions, activeSessions }: DashboardProps) {
+export default function Dashboard({ viewer, summary, deviceStatus, escalations, revenueRows, recentTransactions, activeSessions }: DashboardProps) {
     const scopeLabel = viewer.scope === 'platform' ? 'Platform admin view' : 'Tenant operations view';
 
     return (
@@ -172,11 +217,91 @@ export default function Dashboard({ viewer, summary, deviceStatus, revenueRows, 
                         icon={Clock3}
                     />
                     <StatCard
+                        label="Open escalations"
+                        value={summary.escalations.toString()}
+                        hint="Branch downtime, hardware issues, and payment follow-ups that need attention."
+                        icon={AlertTriangle}
+                    />
+                    <StatCard
                         label="Online devices"
                         value={deviceStatus.online.toString()}
                         hint={`${deviceStatus.offline} offline, ${deviceStatus.provisioning} provisioning.`}
                         icon={Router}
                     />
+                </section>
+
+                <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+                    <Card className="border-border/70">
+                        <CardHeader>
+                            <CardTitle>Escalation summary</CardTitle>
+                            <CardDescription>Real operational issues currently rolled up across the active workspace scope.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                            {[
+                                ['Unavailable branches', escalations.summary.unavailable_branches, 'text-amber-600'],
+                                ['Open incidents', escalations.summary.open_incidents, 'text-rose-600'],
+                                ['Payment follow-ups', escalations.summary.payment_followups, 'text-indigo-600'],
+                            ].map(([label, count, tone]) => (
+                                <div key={label} className="border-border/60 rounded-xl border px-4 py-3">
+                                    <p className="text-muted-foreground text-sm">{label}</p>
+                                    <p className={`mt-2 text-3xl font-semibold ${tone}`}>{count}</p>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/70">
+                        <CardHeader>
+                            <CardTitle>Escalation queue</CardTitle>
+                            <CardDescription>Start here when branch availability, hardware health, or payment fulfilment needs operator follow-up.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {escalations.items.length > 0 ? (
+                                escalations.items.map((item) => {
+                                    const Icon = escalationTypeIcon[item.type];
+
+                                    return (
+                                        <div key={`${item.type}-${item.href}-${item.occurred_at ?? 'now'}`} className="border-border/60 rounded-xl border px-4 py-3">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <div className="bg-primary/10 text-primary rounded-lg p-2">
+                                                            <Icon className="h-4 w-4" />
+                                                        </div>
+                                                        <p className="font-medium">{item.title}</p>
+                                                        <Badge variant="outline" className={escalationTone[item.level] ?? escalationTone.medium}>
+                                                            {item.level}
+                                                        </Badge>
+                                                        <Badge variant="outline">{escalationTypeLabel[item.type]}</Badge>
+                                                    </div>
+                                                    <p className="text-muted-foreground text-sm">{item.description}</p>
+                                                    <p className="text-muted-foreground text-sm">
+                                                        {[item.branch, item.tenant, item.occurred_at ? dateTime.format(new Date(item.occurred_at)) : null]
+                                                            .filter(Boolean)
+                                                            .join(' • ')}
+                                                    </p>
+                                                </div>
+                                                <Link
+                                                    href={item.href}
+                                                    className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                                                >
+                                                    {item.action_label}
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="border-border/60 rounded-xl border border-dashed px-4 py-8 text-center">
+                                    <p className="font-medium">No escalations are open right now.</p>
+                                    <p className="text-muted-foreground mt-2 text-sm">
+                                        Branches, devices, and payment follow-ups are currently clear for this workspace scope.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </section>
 
                 <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">

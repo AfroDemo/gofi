@@ -32,6 +32,8 @@ class BranchShowController extends Controller
                 'manager:id,name,email',
                 'statusEvents:id,tenant_id,branch_id,changed_by_user_id,from_status,to_status,reason,created_at',
                 'statusEvents.actor:id,name,email',
+                'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
+                'operatorNotes.author:id,name,email',
             ])
             ->findOrFail($branch->id);
 
@@ -136,6 +138,19 @@ class BranchShowController extends Controller
                 'opened_at' => $incident->opened_at?->toIso8601String(),
                 'resolved_at' => $incident->resolved_at?->toIso8601String(),
             ])->values(),
+            'notes' => $branch->operatorNotes
+                ->sortByDesc('created_at')
+                ->values()
+                ->map(fn ($note) => [
+                    'id' => $note->id,
+                    'note' => $note->note,
+                    'created_at' => $note->created_at?->toIso8601String(),
+                    'author' => $note->author ? [
+                        'name' => $note->author->name,
+                        'email' => $note->author->email,
+                    ] : null,
+                ])
+                ->all(),
         ]);
     }
 }
