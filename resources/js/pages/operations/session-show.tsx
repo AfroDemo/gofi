@@ -1,13 +1,17 @@
+import InputError from '@/components/input-error';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatDateTime, formatMinutes, formatMoney, formatSpeed } from '@/lib/formatters';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Clock3, DatabaseZap, ShieldCheck, Ticket, Wallet } from 'lucide-react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { ArrowLeft, CircleAlert, Clock3, DatabaseZap, ShieldCheck, Ticket, Wallet } from 'lucide-react';
+import { FormEvent } from 'react';
 
 interface Viewer {
     scope: 'platform' | 'tenant';
@@ -62,6 +66,10 @@ interface SessionDetail {
         name: string;
         email: string;
     } | null;
+    terminator: {
+        name: string;
+        email: string;
+    } | null;
     mac_address: string;
     ip_address: string | null;
     duration_minutes: number | null;
@@ -74,6 +82,8 @@ interface SessionDetail {
     started_age_minutes: number | null;
     expires_in_minutes: number | null;
     expired_since_minutes: number | null;
+    termination_reason: string | null;
+    can_terminate: boolean;
 }
 
 interface SessionShowProps {
@@ -94,16 +104,41 @@ const tone: Record<string, string> = {
 };
 
 export default function SessionShow({ viewer, session }: SessionShowProps) {
+    const { flash } = usePage<SharedData>().props;
+    const terminateForm = useForm({
+        termination_reason: '',
+    });
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Sessions', href: '/sessions' },
         { title: `Session #${session.id}`, href: `/sessions/${session.id}` },
     ];
 
+    const submitTermination = (event: FormEvent) => {
+        event.preventDefault();
+        terminateForm.post(route('sessions.terminate', session.id));
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Session #${session.id}`} />
             <div className="flex flex-1 flex-col gap-6 rounded-xl p-4">
+                {flash?.success && (
+                    <Alert className="border-emerald-500/25 bg-emerald-500/8 text-emerald-900 dark:text-emerald-100">
+                        <CircleAlert className="size-4" />
+                        <AlertTitle>Session updated</AlertTitle>
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <CircleAlert className="size-4" />
+                        <AlertTitle>Session action issue</AlertTitle>
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+
                 <div className="flex justify-start">
                     <Link
                         href={route('sessions.index')}
@@ -222,6 +257,16 @@ export default function SessionShow({ viewer, session }: SessionShowProps) {
                                 </div>
                             </div>
 
+                            {session.termination_reason && (
+                                <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                    <p className="font-medium">Termination record</p>
+                                    <p className="text-muted-foreground mt-2 text-sm leading-6">{session.termination_reason}</p>
+                                    <p className="text-muted-foreground mt-3 text-sm">
+                                        Ended by {session.terminator?.name || 'Unknown operator'} • {session.terminator?.email || 'No contact recorded'}
+                                    </p>
+                                </div>
+                            )}
+
                             {session.package && (
                                 <div className="border-border/60 rounded-2xl border px-4 py-4">
                                     <p className="font-medium">{session.package.name}</p>
@@ -288,6 +333,31 @@ export default function SessionShow({ viewer, session }: SessionShowProps) {
                             ) : (
                                 <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
                                     No transaction is linked to this session.
+                                </div>
+                            )}
+
+                            {session.can_terminate && (
+                                <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                    <p className="font-medium">Terminate session</p>
+                                    <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                        Use this when access should stop early due to customer request, branch intervention, or an operational issue that should not wait for expiry.
+                                    </p>
+                                    <form onSubmit={submitTermination} className="mt-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="termination_reason">Reason</Label>
+                                            <textarea
+                                                id="termination_reason"
+                                                value={terminateForm.data.termination_reason}
+                                                onChange={(event) => terminateForm.setData('termination_reason', event.target.value)}
+                                                placeholder="Explain why the session is being terminated early."
+                                                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-28 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                            />
+                                            <InputError message={terminateForm.errors.termination_reason} />
+                                        </div>
+                                        <Button type="submit" variant="destructive" disabled={terminateForm.processing} className="rounded-xl">
+                                            Terminate session
+                                        </Button>
+                                    </form>
                                 </div>
                             )}
                         </CardContent>

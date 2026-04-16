@@ -18,6 +18,7 @@ class HotspotSession extends Model
         'voucher_id',
         'transaction_id',
         'authorized_by_user_id',
+        'terminated_by_user_id',
         'device_mac_address',
         'device_ip_address',
         'status',
@@ -27,6 +28,7 @@ class HotspotSession extends Model
         'started_at',
         'expires_at',
         'ended_at',
+        'termination_reason',
     ];
 
     protected function casts(): array
@@ -67,5 +69,10 @@ class HotspotSession extends Model
     public function authorizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'authorized_by_user_id');
+    }
+
+    public function terminator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'terminated_by_user_id');
     }
 }

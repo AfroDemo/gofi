@@ -10,6 +10,7 @@ use App\Http\Controllers\PackageManagementController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\SessionIndexController;
 use App\Http\Controllers\SessionShowController;
+use App\Http\Controllers\SessionTerminationController;
 use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
@@ -60,6 +61,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('devices', DeviceIndexController::class)->name('devices.index');
     Route::get('devices/{device}', DeviceShowController::class)->name('devices.show');
     Route::get('sessions', SessionIndexController::class)->name('sessions.index');
+    Route::post('sessions/{session}/terminate', SessionTerminationController::class)->name('sessions.terminate');
     Route::get('sessions/{session}', SessionShowController::class)->name('sessions.show');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
     Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');

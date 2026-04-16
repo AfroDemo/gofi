@@ -28,6 +28,7 @@ class SessionShowController extends Controller
                 'voucher:id,code,status,locked_mac_address,redeemed_at,expires_at',
                 'transaction:id,reference,status,source,amount,gateway_fee,currency,created_at,confirmed_at,provider_reference',
                 'authorizer:id,name,email',
+                'terminator:id,name,email',
             ])
             ->findOrFail($session->id);
 
@@ -94,6 +95,10 @@ class SessionShowController extends Controller
                     'name' => $session->authorizer->name,
                     'email' => $session->authorizer->email,
                 ] : null,
+                'terminator' => $session->terminator ? [
+                    'name' => $session->terminator->name,
+                    'email' => $session->terminator->email,
+                ] : null,
                 'mac_address' => $session->device_mac_address,
                 'ip_address' => $session->device_ip_address,
                 'duration_minutes' => $session->duration_minutes,
@@ -106,6 +111,8 @@ class SessionShowController extends Controller
                 'started_age_minutes' => $startedAgeMinutes,
                 'expires_in_minutes' => $expiryDeltaMinutes !== null && $expiryDeltaMinutes > 0 ? $expiryDeltaMinutes : null,
                 'expired_since_minutes' => $expiryDeltaMinutes !== null && $expiryDeltaMinutes < 0 ? abs($expiryDeltaMinutes) : null,
+                'termination_reason' => $session->termination_reason,
+                'can_terminate' => in_array($session->status, [HotspotSessionStatus::Active, HotspotSessionStatus::Pending], true),
             ],
         ]);
     }

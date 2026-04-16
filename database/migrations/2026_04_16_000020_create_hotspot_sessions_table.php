@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('voucher_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('transaction_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('authorized_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('terminated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('device_mac_address', 32);
             $table->string('device_ip_address', 45)->nullable();
             $table->string('status')->default(HotspotSessionStatus::Pending->value);
@@ -26,6 +27,7 @@ return new class extends Migration
             $table->timestamp('started_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('ended_at')->nullable();
+            $table->text('termination_reason')->nullable();
             $table->timestamps();
         });
     }

@@ -36,6 +36,7 @@ class SessionShowTest extends TestCase
                 ->where('session.voucher.code', 'CFH-1001')
                 ->where('session.transaction.reference', 'TXN-1002')
                 ->where('session.authorizer.name', 'Moses Ally')
+                ->where('session.can_terminate', false)
             );
     }
 
