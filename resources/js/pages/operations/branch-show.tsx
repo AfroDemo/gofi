@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatDateTime, formatMoney } from '@/lib/formatters';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, CircleAlert, Clock3, MapPinned, Router, Wallet } from 'lucide-react';
+import { Activity, ArrowLeft, CircleAlert, Clock3, MapPinned, Router } from 'lucide-react';
 import { FormEvent } from 'react';
 
 interface Viewer {

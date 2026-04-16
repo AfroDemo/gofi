@@ -33,6 +33,7 @@ class PortalController extends Controller
     public function show(string $tenantSlug, string $branchCode): Response
     {
         [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+        $availability = $this->portalAvailability($branch);
 
         $packages = AccessPackage::query()
             ->where('tenant_id', $tenant->id)
@@ -65,9 +66,11 @@ class PortalController extends Controller
             'branch' => [
                 'name' => $branch->name,
                 'code' => $branch->code,
+                'status' => $branch->status->value,
                 'location' => $branch->location,
                 'address' => $branch->address,
             ],
+            'availability' => $availability,
             'support' => $this->supportPayload($tenant, $branch),
             'guidance' => $this->portalGuidance($tenant, $branch),
             'packages' => $packages,
@@ -77,6 +80,14 @@ class PortalController extends Controller
     public function checkout(Request $request, string $tenantSlug, string $branchCode): RedirectResponse
     {
         [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+        $availability = $this->portalAvailability($branch);
+
+        if (! $availability['sales_enabled']) {
+            return to_route('portal.show', [
+                'tenantSlug' => $tenant->slug,
+                'branchCode' => $branch->code,
+            ])->with('error', $availability['message']);
+        }
 
         $validated = $request->validate([
             'package_id' => ['required', 'integer'],
@@ -184,6 +195,14 @@ class PortalController extends Controller
     public function redeemVoucher(Request $request, string $tenantSlug, string $branchCode): RedirectResponse
     {
         [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+        $availability = $this->portalAvailability($branch);
+
+        if (! $availability['sales_enabled']) {
+            return to_route('portal.show', [
+                'tenantSlug' => $tenant->slug,
+                'branchCode' => $branch->code,
+            ])->with('error', $availability['message']);
+        }
 
         $validated = $request->validate([
             'voucher_code' => ['required', 'string', 'max:64'],
@@ -287,6 +306,7 @@ class PortalController extends Controller
     public function showTransaction(string $tenantSlug, string $branchCode, string $reference): Response
     {
         [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+        $availability = $this->portalAvailability($branch);
 
         $transaction = Transaction::query()
             ->where('tenant_id', $tenant->id)
@@ -306,6 +326,7 @@ class PortalController extends Controller
             : null;
         $isStalePending = $transaction->status === TransactionStatus::Pending && ($pendingAgeMinutes ?? 0) >= 5;
         $stateHint = match (true) {
+            $transaction->status === TransactionStatus::Successful && $session === null && ! $availability['session_activation_enabled'] => 'branch_unavailable',
             $transaction->status === TransactionStatus::Successful && $session !== null => 'access_active',
             $transaction->status === TransactionStatus::Successful => 'payment_confirmed',
             $transaction->status === TransactionStatus::Pending && $isStalePending => 'stale_pending',
@@ -322,8 +343,10 @@ class PortalController extends Controller
             'branch' => [
                 'name' => $branch->name,
                 'code' => $branch->code,
+                'status' => $branch->status->value,
                 'location' => $branch->location,
             ],
+            'availability' => $availability,
             'support' => $this->supportPayload($tenant, $branch),
             'guidance' => $this->portalGuidance($tenant, $branch),
             'transaction' => [
@@ -377,6 +400,7 @@ class PortalController extends Controller
     public function refreshTransactionStatus(string $tenantSlug, string $branchCode, string $reference): RedirectResponse
     {
         [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+        $availability = $this->portalAvailability($branch);
 
         $transaction = Transaction::query()
             ->where('tenant_id', $tenant->id)
@@ -424,6 +448,19 @@ class PortalController extends Controller
         ]);
 
         if ($transaction->status === TransactionStatus::Successful) {
+            if (! $availability['session_activation_enabled']) {
+                $transaction->update([
+                    'metadata' => $this->mergeMetadata($transaction->metadata, [
+                        'portal' => [
+                            'branch_unavailable_at_confirmation' => true,
+                            'branch_status' => $branch->status->value,
+                        ],
+                    ]),
+                ]);
+
+                return back()->with('error', 'Payment was confirmed, but this branch is currently unavailable, so access has not been activated. Please contact support.');
+            }
+
             $this->fulfillSuccessfulTransaction->execute($transaction);
 
             return back()->with('success', 'Payment confirmed and access session activated.');
@@ -451,10 +488,45 @@ class PortalController extends Controller
             ->with(['manager:id,name,email'])
             ->where('tenant_id', $tenant->id)
             ->where('code', Str::upper($branchCode))
-            ->where('status', BranchStatus::Active)
             ->firstOrFail();
 
         return [$tenant, $branch];
+    }
+
+    /**
+     * @return array{
+     *     status: string,
+     *     sales_enabled: bool,
+     *     session_activation_enabled: bool,
+     *     title: string,
+     *     message: string
+     * }
+     */
+    protected function portalAvailability(Branch $branch): array
+    {
+        return match ($branch->status) {
+            BranchStatus::Active => [
+                'status' => $branch->status->value,
+                'sales_enabled' => true,
+                'session_activation_enabled' => true,
+                'title' => 'Hotspot available',
+                'message' => 'This hotspot is available for package purchases and voucher redemption.',
+            ],
+            BranchStatus::Maintenance => [
+                'status' => $branch->status->value,
+                'sales_enabled' => false,
+                'session_activation_enabled' => false,
+                'title' => 'Hotspot under maintenance',
+                'message' => 'This hotspot is temporarily under maintenance. New payments and voucher activations are currently paused.',
+            ],
+            BranchStatus::Inactive => [
+                'status' => $branch->status->value,
+                'sales_enabled' => false,
+                'session_activation_enabled' => false,
+                'title' => 'Hotspot unavailable',
+                'message' => 'This hotspot is currently unavailable. New payments and voucher activations are not being accepted right now.',
+            ],
+        };
     }
 
     protected function normalizePhoneNumber(string $phoneNumber): string

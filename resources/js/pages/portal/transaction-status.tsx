@@ -15,7 +15,16 @@ interface TenantInfo {
 interface BranchInfo {
     name: string;
     code: string;
+    status: string;
     location: string | null;
+}
+
+interface AvailabilityInfo {
+    status: string;
+    sales_enabled: boolean;
+    session_activation_enabled: boolean;
+    title: string;
+    message: string;
 }
 
 interface SessionInfo {
@@ -66,6 +75,7 @@ interface TransactionInfo {
 interface PortalTransactionStatusProps {
     tenant: TenantInfo;
     branch: BranchInfo;
+    availability: AvailabilityInfo;
     support: {
         network_name: string;
         contact_name: string | null;
@@ -88,11 +98,13 @@ const tone: Record<string, string> = {
     expired: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
-export default function PortalTransactionStatus({ tenant, branch, support, guidance, transaction }: PortalTransactionStatusProps) {
+export default function PortalTransactionStatus({ tenant, branch, availability, support, guidance, transaction }: PortalTransactionStatusProps) {
     const { flash } = usePage<SharedData>().props;
 
     const primaryMessage =
-        transaction.state_hint === 'access_active'
+        transaction.state_hint === 'branch_unavailable'
+            ? 'Payment is confirmed, but this hotspot is currently unavailable, so access has not been activated yet.'
+            : transaction.state_hint === 'access_active'
             ? transaction.source === 'voucher'
                 ? 'Voucher accepted and access session started.'
                 : 'Payment confirmed and access is active for this customer.'
@@ -152,6 +164,14 @@ export default function PortalTransactionStatus({ tenant, branch, support, guida
                                 <Ticket className="size-4" />
                                 <AlertTitle>Payment issue</AlertTitle>
                                 <AlertDescription>{flash.error}</AlertDescription>
+                            </Alert>
+                        )}
+
+                        {!availability.sales_enabled && (
+                            <Alert variant="destructive">
+                                <Ticket className="size-4" />
+                                <AlertTitle>{availability.title}</AlertTitle>
+                                <AlertDescription>{availability.message}</AlertDescription>
                             </Alert>
                         )}
 
@@ -260,6 +280,19 @@ export default function PortalTransactionStatus({ tenant, branch, support, guida
                                                     <p className="text-muted-foreground mt-1 text-sm leading-6">
                                                         This request has been pending for about {transaction.pending_age_minutes} minutes. Check payment status
                                                         first. If nothing changes, start a new request from the portal with the correct number.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : transaction.state_hint === 'branch_unavailable' ? (
+                                        <div className="rounded-2xl border border-rose-500/25 bg-rose-500/8 px-4 py-4">
+                                            <div className="flex items-start gap-3">
+                                                <Ticket className="mt-0.5 size-5 text-rose-700 dark:text-rose-300" />
+                                                <div>
+                                                    <p className="font-medium">Branch is not activating access right now</p>
+                                                    <p className="text-muted-foreground mt-1 text-sm leading-6">
+                                                        The payment was confirmed, but this branch is currently marked {branch.status}. Access has not been
+                                                        started automatically. Please contact branch support below before retrying.
                                                     </p>
                                                 </div>
                                             </div>

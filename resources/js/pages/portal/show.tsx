@@ -19,8 +19,17 @@ interface TenantInfo {
 interface BranchInfo {
     name: string;
     code: string;
+    status: string;
     location: string | null;
     address: string | null;
+}
+
+interface AvailabilityInfo {
+    status: string;
+    sales_enabled: boolean;
+    session_activation_enabled: boolean;
+    title: string;
+    message: string;
 }
 
 interface PackageCard {
@@ -38,6 +47,7 @@ interface PackageCard {
 interface PortalShowProps {
     tenant: TenantInfo;
     branch: BranchInfo;
+    availability: AvailabilityInfo;
     support: {
         network_name: string;
         contact_name: string | null;
@@ -49,7 +59,13 @@ interface PortalShowProps {
     packages: PackageCard[];
 }
 
-export default function PortalShow({ tenant, branch, support, guidance, packages }: PortalShowProps) {
+const tone: Record<string, string> = {
+    active: 'border-emerald-500/25 bg-emerald-500/8 text-emerald-900 dark:text-emerald-100',
+    maintenance: 'border-amber-500/25 bg-amber-500/8 text-amber-900 dark:text-amber-100',
+    inactive: 'border-rose-500/25 bg-rose-500/8 text-rose-900 dark:text-rose-100',
+};
+
+export default function PortalShow({ tenant, branch, availability, support, guidance, packages }: PortalShowProps) {
     const { flash } = usePage<SharedData>().props;
     const checkoutForm = useForm({
         package_id: packages[0]?.id?.toString() ?? '',
@@ -127,6 +143,14 @@ export default function PortalShow({ tenant, branch, support, guidance, packages
                             </Alert>
                         )}
 
+                        {!availability.sales_enabled && (
+                            <Alert className={tone[availability.status] ?? tone.inactive}>
+                                <CircleAlert className="size-4" />
+                                <AlertTitle>{availability.title}</AlertTitle>
+                                <AlertDescription>{availability.message}</AlertDescription>
+                            </Alert>
+                        )}
+
                         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                             <div className="gofi-shell px-6 py-7 sm:px-8">
                                 <Badge variant="outline" className="border-primary/20 bg-primary/8 text-primary rounded-full px-3 py-1">
@@ -142,7 +166,9 @@ export default function PortalShow({ tenant, branch, support, guidance, packages
                                 <div className="mt-5 rounded-2xl border border-dashed px-4 py-4">
                                     <p className="text-muted-foreground text-xs font-semibold tracking-[0.2em] uppercase">Hotspot identity</p>
                                     <p className="mt-2 font-medium">{support.network_name}</p>
-                                    <p className="text-muted-foreground mt-1 text-sm">{support.branch_label}</p>
+                                    <p className="text-muted-foreground mt-1 text-sm">
+                                        {support.branch_label} • {branch.status}
+                                    </p>
                                 </div>
 
                                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -218,12 +244,13 @@ export default function PortalShow({ tenant, branch, support, guidance, packages
 
                                             return (
                                                 <button
-                                                    key={item.id}
-                                                    type="button"
-                                                    onClick={() => checkoutForm.setData('package_id', item.id.toString())}
-                                                    className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
-                                                        isSelected
-                                                            ? 'border-primary bg-primary/7 ring-primary/20 ring-2'
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => checkoutForm.setData('package_id', item.id.toString())}
+                                                disabled={!availability.sales_enabled}
+                                                className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
+                                                    isSelected
+                                                        ? 'border-primary bg-primary/7 ring-primary/20 ring-2'
                                                             : 'border-border/70 bg-background/70 hover:border-primary/40'
                                                     }`}
                                                 >
@@ -306,7 +333,7 @@ export default function PortalShow({ tenant, branch, support, guidance, packages
                                             </div>
 
                                             <Button type="submit" className="w-full rounded-xl" disabled={checkoutForm.processing || packages.length === 0}>
-                                                Start payment request
+                                                {availability.sales_enabled ? 'Start payment request' : availability.title}
                                             </Button>
                                         </form>
                                     </CardContent>
@@ -335,7 +362,12 @@ export default function PortalShow({ tenant, branch, support, guidance, packages
                                                 <InputError message={voucherForm.errors.voucher_code} />
                                             </div>
 
-                                            <Button type="submit" variant="outline" className="w-full rounded-xl" disabled={voucherForm.processing}>
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                className="w-full rounded-xl"
+                                                disabled={voucherForm.processing || !availability.sales_enabled}
+                                            >
                                                 Redeem and activate
                                             </Button>
                                         </form>

@@ -41,6 +41,23 @@ class PortalFlowTest extends TestCase
             );
     }
 
+    public function test_public_portal_page_shows_branch_maintenance_availability(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $this->get(route('portal.show', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'MWG']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('portal/show', false)
+                ->where('branch.name', 'Mwenge Corner')
+                ->where('branch.status', 'maintenance')
+                ->where('availability.sales_enabled', false)
+                ->where('availability.title', 'Hotspot under maintenance')
+                ->has('packages', 1)
+                ->where('packages.0.name', 'Coast Day Pass')
+            );
+    }
+
     public function test_transaction_status_page_exposes_retry_diagnostics_for_stale_pending_payment(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -160,6 +177,24 @@ class PortalFlowTest extends TestCase
         ]);
     }
 
+    public function test_portal_checkout_is_blocked_when_branch_is_under_maintenance(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $package = AccessPackage::query()->where('name', 'Coast Day Pass')->firstOrFail();
+
+        $this->post(route('portal.checkout', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'MWG']), [
+            'package_id' => $package->id,
+            'phone_number' => '255712000444',
+        ])
+            ->assertRedirect(route('portal.show', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'MWG']));
+
+        $this->assertDatabaseMissing('transactions', [
+            'branch_id' => $package->branch_id,
+            'phone_number' => '255712000444',
+        ]);
+    }
+
     public function test_portal_can_refresh_pending_payment_and_activate_session(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -232,6 +267,69 @@ class PortalFlowTest extends TestCase
         ]);
     }
 
+    public function test_confirmed_payment_does_not_activate_session_when_branch_is_unavailable(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $tenant = Tenant::query()->where('slug', 'coastfi-networks')->firstOrFail();
+        $branch = Branch::query()->where('tenant_id', $tenant->id)->where('code', 'MWG')->firstOrFail();
+        $package = AccessPackage::query()->where('tenant_id', $tenant->id)->where('name', 'Coast Day Pass')->firstOrFail();
+        $rule = RevenueShareRule::query()->where('tenant_id', $tenant->id)->firstOrFail();
+
+        $transaction = Transaction::query()->create([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'access_package_id' => $package->id,
+            'revenue_share_rule_id' => $rule->id,
+            'source' => TransactionSource::MobileMoney,
+            'status' => TransactionStatus::Pending,
+            'reference' => 'PRT-MAINT-100',
+            'provider_reference' => 'SELCOM-MAINT-100',
+            'phone_number' => '255712000888',
+            'amount' => 3000,
+            'gateway_fee' => 0,
+            'currency' => 'TZS',
+            'metadata' => [
+                'channel' => 'portal',
+                'device_ip_address' => '127.0.0.1',
+                'payment' => [
+                    'gateway' => 'palmpesa',
+                ],
+            ],
+        ]);
+
+        config([
+            'payment.gateway' => 'palmpesa',
+            'payment.fallback_gateway' => 'snippe',
+            'payment.palmpesa.enabled' => true,
+            'payment.snippe.enabled' => false,
+        ]);
+
+        Http::fake([
+            'https://palmpesa.drmlelwa.co.tz/api/order-status' => Http::response([
+                'status' => 'completed',
+                'order_id' => 'SELCOM-MAINT-100',
+                'fee' => 90,
+                'paid_at' => now()->toIso8601String(),
+            ], 200),
+        ]);
+
+        $this->post(route('portal.transactions.refresh', [
+            'tenantSlug' => 'coastfi-networks',
+            'branchCode' => 'MWG',
+            'reference' => $transaction->reference,
+        ]))->assertRedirect();
+
+        $transaction->refresh();
+
+        $this->assertSame(TransactionStatus::Successful, $transaction->status);
+        $this->assertSame(true, data_get($transaction->metadata, 'portal.branch_unavailable_at_confirmation'));
+
+        $this->assertDatabaseMissing('hotspot_sessions', [
+            'transaction_id' => $transaction->id,
+        ]);
+    }
+
     public function test_voucher_redemption_marks_voucher_used_and_creates_active_session(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -271,6 +369,23 @@ class PortalFlowTest extends TestCase
         $this->assertDatabaseHas('ledger_entries', [
             'transaction_id' => $transaction->id,
             'entry_type' => 'sale',
+        ]);
+    }
+
+    public function test_voucher_redemption_is_blocked_when_branch_is_under_maintenance(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $portalUrl = route('portal.show', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'MWG']);
+
+        $this->post(route('portal.voucher.redeem', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'MWG']), [
+            'voucher_code' => 'CFH-1003',
+        ])
+            ->assertRedirect($portalUrl);
+
+        $this->assertDatabaseHas('vouchers', [
+            'code' => 'CFH-1003',
+            'status' => VoucherStatus::Unused->value,
         ]);
     }
 

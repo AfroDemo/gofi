@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Actions\Finance\CreateRevenueAllocation;
+use App\Enums\BranchStatus;
 use App\Enums\DeviceIncidentSeverity;
 use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
@@ -133,6 +134,7 @@ class DemoPlatformSeeder extends Seeder
             'tenant_id' => $coastTenant->id,
             'name' => 'Mwenge Corner',
             'code' => 'MWG',
+            'status' => BranchStatus::Maintenance,
             'location' => 'Dar es Salaam',
             'address' => 'Sam Nujoma Road, Mwenge',
             'manager_user_id' => $coastOperator->id,
