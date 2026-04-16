@@ -298,6 +298,19 @@ class PortalController extends Controller
             ->firstOrFail();
 
         $session = $transaction->hotspotSessions->sortByDesc('started_at')->first();
+        $paymentMetadata = is_array($transaction->metadata) ? ($transaction->metadata['payment'] ?? []) : [];
+        $pendingAgeMinutes = $transaction->status === TransactionStatus::Pending
+            ? (int) ceil($transaction->created_at?->diffInSeconds(now()) / 60)
+            : null;
+        $isStalePending = $transaction->status === TransactionStatus::Pending && ($pendingAgeMinutes ?? 0) >= 5;
+        $stateHint = match (true) {
+            $transaction->status === TransactionStatus::Successful && $session !== null => 'access_active',
+            $transaction->status === TransactionStatus::Successful => 'payment_confirmed',
+            $transaction->status === TransactionStatus::Pending && $isStalePending => 'stale_pending',
+            $transaction->status === TransactionStatus::Pending => 'awaiting_confirmation',
+            $transaction->status === TransactionStatus::Cancelled => 'cancelled',
+            default => 'retry_required',
+        };
 
         return Inertia::render('portal/transaction-status', [
             'tenant' => [
@@ -320,6 +333,29 @@ class PortalController extends Controller
                 'voucher_code' => $transaction->voucher?->code,
                 'created_at' => $transaction->created_at?->toIso8601String(),
                 'confirmed_at' => $transaction->confirmed_at?->toIso8601String(),
+                'state_hint' => $stateHint,
+                'pending_age_minutes' => $pendingAgeMinutes,
+                'payment' => [
+                    'gateway' => data_get($paymentMetadata, 'gateway'),
+                    'provider_reference' => $transaction->provider_reference,
+                    'message' => data_get($paymentMetadata, 'message'),
+                    'using_fallback' => (bool) data_get($paymentMetadata, 'selection.using_fallback', false),
+                    'last_poll' => [
+                        'gateway' => data_get($paymentMetadata, 'last_poll.gateway'),
+                        'status' => data_get($paymentMetadata, 'last_poll.status'),
+                        'checked_at' => data_get($paymentMetadata, 'last_poll.checked_at'),
+                    ],
+                    'attempts' => collect(data_get($paymentMetadata, 'attempts', []))
+                        ->map(fn ($attempt) => [
+                            'gateway' => data_get($attempt, 'gateway'),
+                            'success' => (bool) data_get($attempt, 'success', false),
+                            'message' => data_get($attempt, 'message'),
+                        ])
+                        ->values()
+                        ->all(),
+                    'can_check_status' => $transaction->status === TransactionStatus::Pending && filled($transaction->provider_reference),
+                    'can_restart' => $transaction->status !== TransactionStatus::Successful || $isStalePending,
+                ],
                 'session' => $session ? [
                     'status' => $session->status->value,
                     'device_mac_address' => $session->device_mac_address,

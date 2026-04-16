@@ -14,6 +14,7 @@ use App\Models\Transaction;
 use App\Models\Voucher;
 use Database\Seeders\DemoPlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -34,6 +35,74 @@ class PortalFlowTest extends TestCase
                 ->where('branch.name', 'Kariakoo Hub')
                 ->has('packages', 1)
                 ->where('packages.0.name', 'Coast Quick Hour')
+            );
+    }
+
+    public function test_transaction_status_page_exposes_retry_diagnostics_for_stale_pending_payment(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $tenant = Tenant::query()->where('slug', 'coastfi-networks')->firstOrFail();
+        $branch = Branch::query()->where('tenant_id', $tenant->id)->where('code', 'KRK')->firstOrFail();
+        $package = AccessPackage::query()->where('tenant_id', $tenant->id)->where('name', 'Coast Quick Hour')->firstOrFail();
+        $rule = RevenueShareRule::query()->where('tenant_id', $tenant->id)->firstOrFail();
+
+        $transaction = Transaction::query()->create([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'access_package_id' => $package->id,
+            'revenue_share_rule_id' => $rule->id,
+            'source' => TransactionSource::MobileMoney,
+            'status' => TransactionStatus::Pending,
+            'reference' => 'PRT-DIAG-100',
+            'provider_reference' => 'SELCOM-DIAG-100',
+            'phone_number' => '255712000111',
+            'amount' => 1000,
+            'gateway_fee' => 0,
+            'currency' => 'TZS',
+            'created_at' => Carbon::now()->subMinutes(8),
+            'updated_at' => Carbon::now()->subMinutes(8),
+            'metadata' => [
+                'channel' => 'portal',
+                'payment' => [
+                    'gateway' => 'palmpesa',
+                    'message' => 'Payment request sent to user phone.',
+                    'selection' => [
+                        'using_fallback' => false,
+                    ],
+                    'attempts' => [
+                        [
+                            'gateway' => 'palmpesa',
+                            'success' => true,
+                            'message' => 'Wallet push successful',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $transaction->timestamps = false;
+        $transaction->forceFill([
+            'created_at' => Carbon::now()->subMinutes(8),
+            'updated_at' => Carbon::now()->subMinutes(8),
+        ])->save();
+
+        $this->get(route('portal.transactions.show', [
+            'tenantSlug' => $tenant->slug,
+            'branchCode' => $branch->code,
+            'reference' => $transaction->reference,
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('portal/transaction-status', false)
+                ->where('transaction.reference', 'PRT-DIAG-100')
+                ->where('transaction.state_hint', 'stale_pending')
+                ->where('transaction.pending_age_minutes', fn ($value) => is_int($value) && $value >= 8)
+                ->where('transaction.payment.gateway', 'palmpesa')
+                ->where('transaction.payment.provider_reference', 'SELCOM-DIAG-100')
+                ->where('transaction.payment.can_check_status', true)
+                ->where('transaction.payment.can_restart', true)
+                ->has('transaction.payment.attempts', 1)
             );
     }
 

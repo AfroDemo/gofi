@@ -33,6 +33,8 @@ interface TransactionInfo {
     reference: string;
     source: string;
     status: string;
+    state_hint: string;
+    pending_age_minutes: number | null;
     phone_number: string | null;
     amount: number;
     currency: string | null;
@@ -40,6 +42,24 @@ interface TransactionInfo {
     voucher_code: string | null;
     created_at: string | null;
     confirmed_at: string | null;
+    payment: {
+        gateway: string | null;
+        provider_reference: string | null;
+        message: string | null;
+        using_fallback: boolean;
+        last_poll: {
+            gateway: string | null;
+            status: string | null;
+            checked_at: string | null;
+        };
+        attempts: Array<{
+            gateway: string | null;
+            success: boolean;
+            message: string | null;
+        }>;
+        can_check_status: boolean;
+        can_restart: boolean;
+    };
     session: SessionInfo | null;
 }
 
@@ -64,13 +84,19 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
     const { flash } = usePage<SharedData>().props;
 
     const primaryMessage =
-        transaction.status === 'successful'
+        transaction.state_hint === 'access_active'
             ? transaction.source === 'voucher'
                 ? 'Voucher accepted and access session started.'
-                : 'Payment confirmed and the transaction is complete.'
-            : transaction.status === 'pending'
+                : 'Payment confirmed and access is active for this customer.'
+            : transaction.state_hint === 'payment_confirmed'
+              ? 'Payment confirmed and the transaction is complete.'
+              : transaction.state_hint === 'stale_pending'
+                ? 'This payment request has been pending for several minutes and may need a refresh or retry.'
+                : transaction.state_hint === 'awaiting_confirmation'
               ? 'Payment request is waiting for customer approval or provider callback.'
-              : 'This transaction did not complete successfully.';
+              : transaction.state_hint === 'cancelled'
+                ? 'This payment was cancelled before it completed.'
+                : 'This transaction did not complete successfully.';
 
     return (
         <>
@@ -158,8 +184,8 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                 </div>
                             </div>
 
-                            {transaction.status === 'pending' && (
-                                <div className="mt-6">
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                {transaction.payment.can_check_status && (
                                     <Button
                                         type="button"
                                         variant="outline"
@@ -176,8 +202,16 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                     >
                                         Check payment status
                                     </Button>
-                                </div>
-                            )}
+                                )}
+
+                                {transaction.payment.can_restart && (
+                                    <Button asChild className="rounded-xl">
+                                        <Link href={route('portal.show', { tenantSlug: tenant.slug, branchCode: branch.code })}>
+                                            Start a new request
+                                        </Link>
+                                    </Button>
+                                )}
+                            </div>
                         </section>
 
                         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -187,7 +221,7 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                     <CardDescription>Use the status below to decide whether to wait, retry, or let the customer browse.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {transaction.status === 'pending' ? (
+                                    {transaction.state_hint === 'awaiting_confirmation' ? (
                                         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/8 px-4 py-4">
                                             <div className="flex items-start gap-3">
                                                 <Clock3 className="mt-0.5 size-5 text-amber-700 dark:text-amber-300" />
@@ -196,6 +230,19 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                                     <p className="text-muted-foreground mt-1 text-sm leading-6">
                                                         Ask the customer to check their phone and approve the payment prompt. If the prompt does not arrive,
                                                         return to the portal and start a new request with the correct number.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : transaction.state_hint === 'stale_pending' ? (
+                                        <div className="rounded-2xl border border-orange-500/25 bg-orange-500/8 px-4 py-4">
+                                            <div className="flex items-start gap-3">
+                                                <Clock3 className="mt-0.5 size-5 text-orange-700 dark:text-orange-300" />
+                                                <div>
+                                                    <p className="font-medium">Request may be stuck or delayed</p>
+                                                    <p className="text-muted-foreground mt-1 text-sm leading-6">
+                                                        This request has been pending for about {transaction.pending_age_minutes} minutes. Check payment status
+                                                        first. If nothing changes, start a new request from the portal with the correct number.
                                                     </p>
                                                 </div>
                                             </div>
@@ -209,6 +256,18 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                                     <p className="text-muted-foreground mt-1 text-sm leading-6">
                                                         This sale is marked successful. If a session is active below, the customer can continue browsing without
                                                         any extra step on this screen.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : transaction.state_hint === 'cancelled' ? (
+                                        <div className="rounded-2xl border border-slate-500/25 bg-slate-500/8 px-4 py-4">
+                                            <div className="flex items-start gap-3">
+                                                <Ticket className="mt-0.5 size-5 text-slate-700 dark:text-slate-300" />
+                                                <div>
+                                                    <p className="font-medium">Transaction was cancelled</p>
+                                                    <p className="text-muted-foreground mt-1 text-sm leading-6">
+                                                        The customer can start a fresh payment request from the portal whenever they are ready to try again.
                                                     </p>
                                                 </div>
                                             </div>
@@ -234,6 +293,7 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                             ['Created', formatDateTime(transaction.created_at)],
                                             ['Confirmed', formatDateTime(transaction.confirmed_at)],
                                             ['Source', transaction.source.replaceAll('_', ' ')],
+                                            ['Gateway', transaction.payment.gateway?.replaceAll('_', ' ') || 'Not recorded'],
                                         ].map(([label, value]) => (
                                             <div key={label} className="bg-muted/45 rounded-xl px-3 py-3">
                                                 <p className="text-muted-foreground text-xs uppercase">{label}</p>
@@ -241,6 +301,59 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                             </div>
                                         ))}
                                     </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-border/70 bg-card/88 backdrop-blur">
+                                <CardHeader>
+                                    <CardTitle>Payment diagnostics</CardTitle>
+                                    <CardDescription>Useful status details for slow callbacks, retries, and branch-side support.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                            <p className="text-muted-foreground text-xs uppercase">Provider reference</p>
+                                            <p className="mt-2 font-medium">{transaction.payment.provider_reference || 'Not available'}</p>
+                                        </div>
+                                        <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                            <p className="text-muted-foreground text-xs uppercase">Last provider check</p>
+                                            <p className="mt-2 font-medium">{formatDateTime(transaction.payment.last_poll.checked_at)}</p>
+                                        </div>
+                                        <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                            <p className="text-muted-foreground text-xs uppercase">Last poll status</p>
+                                            <p className="mt-2 font-medium">{transaction.payment.last_poll.status || 'Not checked yet'}</p>
+                                        </div>
+                                        <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                            <p className="text-muted-foreground text-xs uppercase">Fallback used</p>
+                                            <p className="mt-2 font-medium">{transaction.payment.using_fallback ? 'Yes' : 'No'}</p>
+                                        </div>
+                                    </div>
+
+                                    {transaction.payment.message && (
+                                        <div className="rounded-2xl border border-dashed px-4 py-4">
+                                            <p className="text-muted-foreground text-xs uppercase">Gateway message</p>
+                                            <p className="mt-2 text-sm leading-6">{transaction.payment.message}</p>
+                                        </div>
+                                    )}
+
+                                    {transaction.payment.attempts.length > 0 && (
+                                        <div className="space-y-3">
+                                            <p className="text-sm font-medium">Gateway attempts</p>
+                                            {transaction.payment.attempts.map((attempt, index) => (
+                                                <div key={`${attempt.gateway}-${index}`} className="border-border/60 rounded-2xl border px-4 py-4">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <p className="font-medium">{attempt.gateway || 'Unknown gateway'}</p>
+                                                        <Badge variant="outline" className={attempt.success ? tone.successful : tone.failed}>
+                                                            {attempt.success ? 'accepted' : 'failed'}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                                        {attempt.message || 'No gateway message recorded for this attempt.'}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
