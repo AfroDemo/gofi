@@ -92,6 +92,8 @@ interface MyFollowUpSummary {
     branches: number;
     devices: number;
     transactions: number;
+    awaiting_acknowledgement: number;
+    acknowledged: number;
 }
 
 interface MyFollowUpItem {
@@ -101,6 +103,7 @@ interface MyFollowUpItem {
     tenant: string | null;
     branch: string | null;
     assigned_at: string | null;
+    acknowledged_at: string | null;
     href: string;
 }
 
@@ -347,7 +350,8 @@ export default function Dashboard({ viewer, summary, deviceStatus, escalations, 
                         <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                             {[
                                 ['Total assigned', myFollowUps.summary.total, 'text-primary'],
-                                ['Branch follow-ups', myFollowUps.summary.branches, 'text-amber-600'],
+                                ['Waiting for acknowledgement', myFollowUps.summary.awaiting_acknowledgement, 'text-amber-600'],
+                                ['Acknowledged', myFollowUps.summary.acknowledged, 'text-emerald-600'],
                                 ['Device follow-ups', myFollowUps.summary.devices, 'text-rose-600'],
                                 ['Transaction follow-ups', myFollowUps.summary.transactions, 'text-indigo-600'],
                             ].map(([label, count, tone]) => (
@@ -376,10 +380,25 @@ export default function Dashboard({ viewer, summary, deviceStatus, escalations, 
                                                         <Badge variant="outline" className={followUpTypeTone[item.type]}>
                                                             {item.type}
                                                         </Badge>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={
+                                                                item.acknowledged_at
+                                                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                                            }
+                                                        >
+                                                            {item.acknowledged_at ? 'Acknowledged' : 'Awaiting acknowledgement'}
+                                                        </Badge>
                                                     </div>
                                                     <p className="text-muted-foreground text-sm">{item.description}</p>
                                                     <p className="text-muted-foreground text-sm">
-                                                        {[item.branch, item.tenant, item.assigned_at ? dateTime.format(new Date(item.assigned_at)) : null]
+                                                        {[
+                                                            item.branch,
+                                                            item.tenant,
+                                                            item.assigned_at ? `Assigned ${dateTime.format(new Date(item.assigned_at))}` : null,
+                                                            item.acknowledged_at ? `Acknowledged ${dateTime.format(new Date(item.acknowledged_at))}` : null,
+                                                        ]
                                                             .filter(Boolean)
                                                             .join(' • ')}
                                                     </p>

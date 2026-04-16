@@ -18,9 +18,11 @@ class OperatorFollowUp extends Model
         'assigned_user_id',
         'assigned_by_user_id',
         'resolved_by_user_id',
+        'acknowledged_by_user_id',
         'assigned_at',
         'status',
         'resolved_at',
+        'acknowledged_at',
     ];
 
     protected function casts(): array
@@ -29,6 +31,7 @@ class OperatorFollowUp extends Model
             'assigned_at' => 'datetime',
             'status' => OperatorFollowUpStatus::class,
             'resolved_at' => 'datetime',
+            'acknowledged_at' => 'datetime',
         ];
     }
 
@@ -55,6 +58,11 @@ class OperatorFollowUp extends Model
     public function resolvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'resolved_by_user_id');
+    }
+
+    public function acknowledgedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'acknowledged_by_user_id');
     }
 
     public function followable(): MorphTo

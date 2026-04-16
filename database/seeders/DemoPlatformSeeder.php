@@ -556,6 +556,8 @@ class DemoPlatformSeeder extends Seeder
             'followable_type' => HotspotDevice::class,
             'followable_id' => $mwengeRouter->id,
             'assigned_at' => $now->copy()->subMinutes(90),
+            'acknowledged_by_user_id' => $coastOperator->id,
+            'acknowledged_at' => $now->copy()->subMinutes(82),
             'created_at' => $now->copy()->subMinutes(90),
             'updated_at' => $now->copy()->subMinutes(90),
         ]);

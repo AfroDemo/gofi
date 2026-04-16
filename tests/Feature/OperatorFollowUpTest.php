@@ -121,6 +121,35 @@ class OperatorFollowUpTest extends TestCase
         ]);
     }
 
+    public function test_assigned_operator_can_acknowledge_device_follow_up(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $operator = User::query()->where('email', 'moses@coastfi.test')->firstOrFail();
+        $branch = Branch::query()->where('code', 'MWG')->firstOrFail();
+
+        $this->actingAs($operator)
+            ->post(route('branches.follow-up.acknowledge', $branch))
+            ->assertRedirect(route('branches.show', $branch));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Branch::class)
+            ->where('followable_id', $branch->id)
+            ->firstOrFail();
+
+        $this->assertSame($operator->id, $followUp->acknowledged_by_user_id);
+        $this->assertNotNull($followUp->acknowledged_at);
+
+        $this->assertDatabaseHas('operator_notes', [
+            'tenant_id' => $branch->tenant_id,
+            'branch_id' => $branch->id,
+            'user_id' => $operator->id,
+            'noteable_type' => Branch::class,
+            'noteable_id' => $branch->id,
+            'note' => 'Moses Ally acknowledged this follow-up and is actively working it.',
+        ]);
+    }
+
     public function test_tenant_user_can_mark_transaction_follow_up_resolved(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -183,6 +212,26 @@ class OperatorFollowUpTest extends TestCase
             'noteable_id' => $branch->id,
             'note' => 'Amina Juma reopened this follow-up.',
         ]);
+    }
+
+    public function test_other_tenant_user_cannot_acknowledge_someone_elses_follow_up(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+        $branch = Branch::query()->where('code', 'MWG')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('branches.follow-up.acknowledge', $branch))
+            ->assertRedirect(route('branches.show', $branch));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Branch::class)
+            ->where('followable_id', $branch->id)
+            ->firstOrFail();
+
+        $this->assertNull($followUp->acknowledged_by_user_id);
+        $this->assertNull($followUp->acknowledged_at);
     }
 
     public function test_tenant_user_cannot_take_other_tenant_follow_up(): void

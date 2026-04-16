@@ -22,6 +22,8 @@ class AssignOperatorFollowUp
             'status' => OperatorFollowUpStatus::NeedsFollowUp,
             'resolved_by_user_id' => null,
             'resolved_at' => null,
+            'acknowledged_by_user_id' => null,
+            'acknowledged_at' => null,
         ]);
 
         $message = $assignedUser->is($actor)

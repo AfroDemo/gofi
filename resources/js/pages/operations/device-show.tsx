@@ -113,11 +113,13 @@ interface DeviceShowProps {
         assigned_at: string | null;
         status: string;
         resolved_at: string | null;
+        acknowledged_at: string | null;
         assigned_user_id?: number | null;
         owned_by_viewer: boolean;
         assigned_user: { name: string; email: string } | null;
         assigned_by: { name: string; email: string } | null;
         resolved_by: { name: string; email: string } | null;
+        acknowledged_by: { name: string; email: string } | null;
     } | null;
     assignable_users: Array<{ id: number; name: string; email: string }>;
     notes: FollowUpNoteRow[];
@@ -370,6 +372,7 @@ export default function DeviceShow({
                     notes={notes}
                     followUp={follow_up}
                     assignHref={route('devices.follow-up.store', device.id)}
+                    acknowledgeHref={route('devices.follow-up.acknowledge', device.id)}
                     resolveHref={route('devices.follow-up.resolve', device.id)}
                     reopenHref={route('devices.follow-up.reopen', device.id)}
                     releaseOwnershipHref={route('devices.follow-up.destroy', device.id)}

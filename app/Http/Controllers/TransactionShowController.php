@@ -33,10 +33,11 @@ class TransactionShowController extends Controller
                 'hotspotSessions.branch:id,name',
                 'hotspotSessions.accessPackage:id,name',
                 'ledgerEntries:id,tenant_id,transaction_id,direction,entry_type,amount,currency,balance_after,description,posted_at',
-                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,acknowledged_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at,acknowledged_at',
                 'operatorFollowUp.assignedUser:id,name,email',
                 'operatorFollowUp.assignedBy:id,name,email',
                 'operatorFollowUp.resolvedBy:id,name,email',
+                'operatorFollowUp.acknowledgedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -159,6 +160,7 @@ class TransactionShowController extends Controller
                     'assigned_at' => $transaction->operatorFollowUp->assigned_at?->toIso8601String(),
                     'status' => $transaction->operatorFollowUp->status->value,
                     'resolved_at' => $transaction->operatorFollowUp->resolved_at?->toIso8601String(),
+                    'acknowledged_at' => $transaction->operatorFollowUp->acknowledged_at?->toIso8601String(),
                     'owned_by_viewer' => $transaction->operatorFollowUp->assigned_user_id === $request->user()?->id,
                     'assigned_user_id' => $transaction->operatorFollowUp->assigned_user_id,
                     'assigned_user' => $transaction->operatorFollowUp->assignedUser ? [
@@ -172,6 +174,10 @@ class TransactionShowController extends Controller
                     'resolved_by' => $transaction->operatorFollowUp->resolvedBy ? [
                         'name' => $transaction->operatorFollowUp->resolvedBy->name,
                         'email' => $transaction->operatorFollowUp->resolvedBy->email,
+                    ] : null,
+                    'acknowledged_by' => $transaction->operatorFollowUp->acknowledgedBy ? [
+                        'name' => $transaction->operatorFollowUp->acknowledgedBy->name,
+                        'email' => $transaction->operatorFollowUp->acknowledgedBy->email,
                     ] : null,
                 ] : null,
                 'assignable_users' => $assignableUsers->map(fn (User $user) => [

@@ -22,11 +22,13 @@ interface FollowUpOwner {
     assigned_at: string | null;
     status: string;
     resolved_at: string | null;
+    acknowledged_at: string | null;
     assigned_user_id?: number | null;
     owned_by_viewer: boolean;
     assigned_user: NoteAuthor | null;
     assigned_by: NoteAuthor | null;
     resolved_by: NoteAuthor | null;
+    acknowledged_by: NoteAuthor | null;
 }
 
 interface AssignableUser {
@@ -41,6 +43,7 @@ interface FollowUpNotesPanelProps {
     notes: FollowUpNoteRow[];
     followUp?: FollowUpOwner | null;
     assignHref: string;
+    acknowledgeHref: string;
     resolveHref: string;
     reopenHref: string;
     releaseOwnershipHref: string;
@@ -60,6 +63,7 @@ export function FollowUpNotesPanel({
     notes,
     followUp = null,
     assignHref,
+    acknowledgeHref,
     resolveHref,
     reopenHref,
     releaseOwnershipHref,
@@ -116,6 +120,16 @@ export function FollowUpNotesPanel({
                                 Owned since {formatDateTime(followUp.assigned_at)}
                                 {followUp.assigned_by?.name ? ` • assigned by ${followUp.assigned_by.name}` : ''}
                             </p>
+                            {followUp.acknowledged_at ? (
+                                <p className="text-muted-foreground mt-2 text-sm">
+                                    Acknowledged {formatDateTime(followUp.acknowledged_at)}
+                                    {followUp.acknowledged_by?.name ? ` • by ${followUp.acknowledged_by.name}` : ''}
+                                </p>
+                            ) : (
+                                <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+                                    This follow-up is still waiting for acknowledgement from the assigned operator.
+                                </p>
+                            )}
                             {followUp.status === 'resolved' && (
                                 <p className="text-muted-foreground mt-2 text-sm">
                                     Resolved {formatDateTime(followUp.resolved_at)}
@@ -143,6 +157,20 @@ export function FollowUpNotesPanel({
                                 <Button type="button" variant="outline" className="rounded-xl" onClick={assignSelectedUser}>
                                     {followUp.owned_by_viewer ? 'Reassign follow-up' : 'Assign follow-up'}
                                 </Button>
+                                {!followUp.acknowledged_at && followUp.owned_by_viewer && followUp.status !== 'resolved' && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl"
+                                        onClick={() =>
+                                            router.post(acknowledgeHref, {}, {
+                                                preserveScroll: true,
+                                            })
+                                        }
+                                    >
+                                        Acknowledge follow-up
+                                    </Button>
+                                )}
                                 {followUp.status === 'resolved' ? (
                                     <Button
                                         type="button"

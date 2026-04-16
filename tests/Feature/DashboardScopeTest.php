@@ -40,6 +40,8 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.open_incidents', 1)
                 ->where('escalations.summary.payment_followups', 0)
                 ->where('myFollowUps.summary.total', 0)
+                ->where('myFollowUps.summary.awaiting_acknowledgement', 0)
+                ->where('myFollowUps.summary.acknowledged', 0)
                 ->has('escalations.items', 2)
                 ->has('myFollowUps.items', 0)
             );
@@ -67,6 +69,8 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.open_incidents', 1)
                 ->where('escalations.summary.payment_followups', 0)
                 ->where('myFollowUps.summary.total', 1)
+                ->where('myFollowUps.summary.awaiting_acknowledgement', 1)
+                ->where('myFollowUps.summary.acknowledged', 0)
                 ->where('myFollowUps.summary.transactions', 1)
                 ->where('myFollowUps.summary.branches', 0)
                 ->where('myFollowUps.summary.devices', 0)
@@ -96,6 +100,8 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.open_incidents', 0)
                 ->where('escalations.summary.payment_followups', 0)
                 ->where('myFollowUps.summary.total', 0)
+                ->where('myFollowUps.summary.awaiting_acknowledgement', 0)
+                ->where('myFollowUps.summary.acknowledged', 0)
                 ->has('escalations.items', 0)
                 ->has('myFollowUps.items', 0)
             );
@@ -189,11 +195,15 @@ class DashboardScopeTest extends TestCase
                 ->where('myFollowUps.summary.branches', 1)
                 ->where('myFollowUps.summary.devices', 1)
                 ->where('myFollowUps.summary.transactions', 0)
+                ->where('myFollowUps.summary.awaiting_acknowledgement', 1)
+                ->where('myFollowUps.summary.acknowledged', 1)
                 ->has('myFollowUps.items', 2)
                 ->where('myFollowUps.items.0.type', 'device')
                 ->where('myFollowUps.items.0.title', 'MWG RTR 01')
+                ->where('myFollowUps.items.0.acknowledged_at', fn ($value) => filled($value))
                 ->where('myFollowUps.items.1.type', 'branch')
                 ->where('myFollowUps.items.1.title', 'Mwenge Corner')
+                ->where('myFollowUps.items.1.acknowledged_at', null)
             );
     }
 }

@@ -117,11 +117,13 @@ interface TransactionDetail {
         assigned_at: string | null;
         status: string;
         resolved_at: string | null;
+        acknowledged_at: string | null;
         assigned_user_id?: number | null;
         owned_by_viewer: boolean;
         assigned_user: { name: string; email: string } | null;
         assigned_by: { name: string; email: string } | null;
         resolved_by: { name: string; email: string } | null;
+        acknowledged_by: { name: string; email: string } | null;
     } | null;
     assignable_users: Array<{ id: number; name: string; email: string }>;
     notes: FollowUpNoteRow[];
@@ -440,6 +442,7 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
                     notes={transaction.notes}
                     followUp={transaction.follow_up}
                     assignHref={route('transactions.follow-up.store', transaction.id)}
+                    acknowledgeHref={route('transactions.follow-up.acknowledge', transaction.id)}
                     resolveHref={route('transactions.follow-up.resolve', transaction.id)}
                     reopenHref={route('transactions.follow-up.reopen', transaction.id)}
                     releaseOwnershipHref={route('transactions.follow-up.destroy', transaction.id)}

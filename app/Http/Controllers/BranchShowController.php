@@ -33,10 +33,11 @@ class BranchShowController extends Controller
                 'manager:id,name,email',
                 'statusEvents:id,tenant_id,branch_id,changed_by_user_id,from_status,to_status,reason,created_at',
                 'statusEvents.actor:id,name,email',
-                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,acknowledged_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at,acknowledged_at',
                 'operatorFollowUp.assignedUser:id,name,email',
                 'operatorFollowUp.assignedBy:id,name,email',
                 'operatorFollowUp.resolvedBy:id,name,email',
+                'operatorFollowUp.acknowledgedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -160,6 +161,7 @@ class BranchShowController extends Controller
                 'assigned_at' => $branch->operatorFollowUp->assigned_at?->toIso8601String(),
                 'status' => $branch->operatorFollowUp->status->value,
                 'resolved_at' => $branch->operatorFollowUp->resolved_at?->toIso8601String(),
+                'acknowledged_at' => $branch->operatorFollowUp->acknowledged_at?->toIso8601String(),
                 'owned_by_viewer' => $branch->operatorFollowUp->assigned_user_id === $request->user()?->id,
                 'assigned_user_id' => $branch->operatorFollowUp->assigned_user_id,
                 'assigned_user' => $branch->operatorFollowUp->assignedUser ? [
@@ -173,6 +175,10 @@ class BranchShowController extends Controller
                 'resolved_by' => $branch->operatorFollowUp->resolvedBy ? [
                     'name' => $branch->operatorFollowUp->resolvedBy->name,
                     'email' => $branch->operatorFollowUp->resolvedBy->email,
+                ] : null,
+                'acknowledged_by' => $branch->operatorFollowUp->acknowledgedBy ? [
+                    'name' => $branch->operatorFollowUp->acknowledgedBy->name,
+                    'email' => $branch->operatorFollowUp->acknowledgedBy->email,
                 ] : null,
             ] : null,
             'assignable_users' => $assignableUsers->map(fn (User $user) => [

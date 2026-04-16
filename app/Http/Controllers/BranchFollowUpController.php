@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Ops\AcknowledgeOperatorFollowUp;
 use App\Actions\Ops\AssignOperatorFollowUp;
 use App\Actions\Ops\ReleaseOperatorFollowUp;
 use App\Actions\Ops\ReopenOperatorFollowUp;
@@ -18,6 +19,7 @@ class BranchFollowUpController extends Controller
 
     public function __construct(
         protected AssignOperatorFollowUp $assignOperatorFollowUp,
+        protected AcknowledgeOperatorFollowUp $acknowledgeOperatorFollowUp,
         protected ResolveOperatorFollowUp $resolveOperatorFollowUp,
         protected ReopenOperatorFollowUp $reopenOperatorFollowUp,
         protected ReleaseOperatorFollowUp $releaseOperatorFollowUp,
@@ -67,6 +69,19 @@ class BranchFollowUpController extends Controller
         $this->resolveOperatorFollowUp->execute($branch, $request->user());
 
         return to_route('branches.show', $branch)->with('success', 'Follow-up marked as resolved.');
+    }
+
+    public function acknowledge(Request $request, Branch $branch): RedirectResponse
+    {
+        $scope = $this->resolveWorkspaceScope($request);
+        $branch = Branch::query()->whereIn('tenant_id', $scope['tenant_ids'])->with('operatorFollowUp')->findOrFail($branch->id);
+
+        $acknowledged = $this->acknowledgeOperatorFollowUp->execute($branch, $request->user());
+
+        return to_route('branches.show', $branch)->with(
+            $acknowledged ? 'success' : 'error',
+            $acknowledged ? 'Follow-up acknowledged.' : 'Only the assigned operator can acknowledge this follow-up.'
+        );
     }
 
     public function reopen(Request $request, Branch $branch): RedirectResponse

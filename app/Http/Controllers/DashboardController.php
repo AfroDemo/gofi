@@ -115,7 +115,7 @@ class DashboardController extends Controller
                     ->where('assigned_user_id', $viewer->id)
                     ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
             })
-            ->with(['tenant:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->with(['tenant:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at,acknowledged_at'])
             ->orderByDesc('updated_at')
             ->get()
             ->map(fn (Branch $branch) => [
@@ -125,6 +125,7 @@ class DashboardController extends Controller
                 'tenant' => $branch->tenant?->name,
                 'branch' => $branch->name,
                 'assigned_at' => $branch->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'acknowledged_at' => $branch->operatorFollowUp?->acknowledged_at?->toIso8601String(),
                 'href' => route('branches.show', $branch),
             ]);
 
@@ -135,7 +136,7 @@ class DashboardController extends Controller
                     ->where('assigned_user_id', $viewer->id)
                     ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
             })
-            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at,acknowledged_at'])
             ->orderByDesc('updated_at')
             ->get()
             ->map(fn (HotspotDevice $device) => [
@@ -148,6 +149,7 @@ class DashboardController extends Controller
                 'tenant' => $device->tenant?->name,
                 'branch' => $device->branch?->name,
                 'assigned_at' => $device->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'acknowledged_at' => $device->operatorFollowUp?->acknowledged_at?->toIso8601String(),
                 'href' => route('devices.show', $device),
             ]);
 
@@ -158,7 +160,7 @@ class DashboardController extends Controller
                     ->where('assigned_user_id', $viewer->id)
                     ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
             })
-            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at,acknowledged_at'])
             ->latest()
             ->get()
             ->map(fn (Transaction $transaction) => [
@@ -168,6 +170,7 @@ class DashboardController extends Controller
                 'tenant' => $transaction->tenant?->name,
                 'branch' => $transaction->branch?->name,
                 'assigned_at' => $transaction->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'acknowledged_at' => $transaction->operatorFollowUp?->acknowledged_at?->toIso8601String(),
                 'href' => route('transactions.show', $transaction),
             ]);
 
@@ -183,6 +186,8 @@ class DashboardController extends Controller
                 'branches' => $branches->count(),
                 'devices' => $devices->count(),
                 'transactions' => $transactions->count(),
+                'awaiting_acknowledgement' => $items->whereNull('acknowledged_at')->count(),
+                'acknowledged' => $items->whereNotNull('acknowledged_at')->count(),
             ],
             'items' => $items
                 ->take(6)
