@@ -25,6 +25,8 @@ class OperationsPagesTest extends TestCase
         $this->get('/packages')->assertRedirect('/login');
         $this->get('/vouchers')->assertRedirect('/login');
         $this->get('/transactions')->assertRedirect('/login');
+        $this->get('/devices')->assertRedirect('/login');
+        $this->get('/sessions')->assertRedirect('/login');
     }
 
     public function test_platform_admin_sees_all_packages_across_tenants(): void
@@ -78,6 +80,32 @@ class OperationsPagesTest extends TestCase
                 ->has('transactions', 3)
                 ->where('transactions.0.tenant', 'CoastFi Networks')
             );
+
+        $this->actingAs($owner)
+            ->get('/devices')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/devices', false)
+                ->where('viewer.scope', 'tenant')
+                ->where('summary.total', 2)
+                ->where('summary.online', 1)
+                ->where('summary.offline', 1)
+                ->has('devices', 2)
+                ->where('devices.0.tenant', 'CoastFi Networks')
+            );
+
+        $this->actingAs($owner)
+            ->get('/sessions')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/sessions', false)
+                ->where('viewer.scope', 'tenant')
+                ->where('summary.total', 2)
+                ->where('summary.active', 1)
+                ->where('summary.expired', 1)
+                ->has('sessions', 2)
+                ->where('sessions.0.tenant', 'CoastFi Networks')
+            );
     }
 
     public function test_operations_pages_apply_filters_without_breaking_tenant_scope(): void
@@ -118,6 +146,28 @@ class OperationsPagesTest extends TestCase
                 ->where('summary.pending_count', 1)
                 ->has('transactions', 1)
                 ->where('transactions.0.reference', 'TXN-1003')
+            );
+
+        $this->actingAs($owner)
+            ->get('/devices?status=offline')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/devices', false)
+                ->where('filters.status', 'offline')
+                ->where('summary.offline', 1)
+                ->has('devices', 1)
+                ->where('devices.0.identifier', 'MWG-RTR-01')
+            );
+
+        $this->actingAs($owner)
+            ->get('/sessions?status=active')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/sessions', false)
+                ->where('filters.status', 'active')
+                ->where('summary.active', 1)
+                ->has('sessions', 1)
+                ->where('sessions.0.status', 'active')
             );
     }
 

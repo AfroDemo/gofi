@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { Building2, CreditCard, LayoutGrid, MapPinned, ShieldCheck, Ticket, Wallet } from 'lucide-react';
+import { Building2, CreditCard, LayoutGrid, MapPinned, RadioTower, ShieldCheck, Ticket, Wallet, Wifi } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -32,6 +32,16 @@ const mainNavItems: NavItem[] = [
         title: 'Vouchers',
         url: '/vouchers',
         icon: Ticket,
+    },
+    {
+        title: 'Devices',
+        url: '/devices',
+        icon: RadioTower,
+    },
+    {
+        title: 'Sessions',
+        url: '/sessions',
+        icon: Wifi,
     },
     {
         title: 'Transactions',

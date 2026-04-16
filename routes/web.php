@@ -3,9 +3,11 @@
 use App\Http\Controllers\BranchIndexController;
 use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceIndexController;
 use App\Http\Controllers\PackageIndexController;
 use App\Http\Controllers\PackageManagementController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\SessionIndexController;
 use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
@@ -53,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('voucher-profiles/{voucherProfile}', [VoucherProfileManagementController::class, 'update'])->name('voucher-profiles.update');
     Route::get('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'create'])->name('voucher-batches.create');
     Route::post('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'store'])->name('voucher-batches.store');
+    Route::get('devices', DeviceIndexController::class)->name('devices.index');
+    Route::get('sessions', SessionIndexController::class)->name('sessions.index');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
     Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
