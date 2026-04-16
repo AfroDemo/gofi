@@ -59,6 +59,11 @@ class Tenant extends Model
         return $this->hasMany(Branch::class);
     }
 
+    public function branchStatusEvents(): HasMany
+    {
+        return $this->hasMany(BranchStatusEvent::class);
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(HotspotDevice::class);

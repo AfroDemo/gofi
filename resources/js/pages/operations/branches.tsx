@@ -159,12 +159,17 @@ export default function Branches({ viewer, summary, branches }: BranchesPageProp
                                             {branch.online_devices_count}/{branch.devices_count} devices online • {branch.active_sessions_count}{' '}
                                             active sessions
                                         </p>
-                                        <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
-                                            <Link href={route('branches.edit', branch.id)}>
-                                                <PencilLine className="size-4" />
-                                                Edit
-                                            </Link>
-                                        </Button>
+                                        <div className="mt-3 flex flex-wrap gap-2 xl:justify-end">
+                                            <Button asChild variant="outline" size="sm" className="rounded-lg">
+                                                <Link href={route('branches.show', branch.id)}>Open detail</Link>
+                                            </Button>
+                                            <Button asChild variant="outline" size="sm" className="rounded-lg">
+                                                <Link href={route('branches.edit', branch.id)}>
+                                                    <PencilLine className="size-4" />
+                                                    Edit
+                                                </Link>
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

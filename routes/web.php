@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\BranchIndexController;
 use App\Http\Controllers\BranchManagementController;
+use App\Http\Controllers\BranchShowController;
+use App\Http\Controllers\BranchStatusUpdateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceIncidentResolveController;
 use App\Http\Controllers\DeviceIncidentStoreController;
@@ -46,6 +48,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('branches', BranchIndexController::class)->name('branches.index');
     Route::get('branches/create', [BranchManagementController::class, 'create'])->name('branches.create');
     Route::post('branches', [BranchManagementController::class, 'store'])->name('branches.store');
+    Route::post('branches/{branch}/status', BranchStatusUpdateController::class)->name('branches.update-status');
+    Route::get('branches/{branch}', BranchShowController::class)->name('branches.show');
     Route::get('branches/{branch}/edit', [BranchManagementController::class, 'edit'])->name('branches.edit');
     Route::patch('branches/{branch}', [BranchManagementController::class, 'update'])->name('branches.update');
     Route::get('packages', PackageIndexController::class)->name('packages.index');

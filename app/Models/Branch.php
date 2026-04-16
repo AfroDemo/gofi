@@ -39,6 +39,11 @@ class Branch extends Model
         return $this->belongsTo(User::class, 'manager_user_id');
     }
 
+    public function statusEvents(): HasMany
+    {
+        return $this->hasMany(BranchStatusEvent::class);
+    }
+
     public function devices(): HasMany
     {
         return $this->hasMany(HotspotDevice::class);

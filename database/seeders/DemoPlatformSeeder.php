@@ -19,6 +19,7 @@ use App\Enums\TransactionStatus;
 use App\Enums\VoucherStatus;
 use App\Models\AccessPackage;
 use App\Models\Branch;
+use App\Models\BranchStatusEvent;
 use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
@@ -144,6 +145,28 @@ class DemoPlatformSeeder extends Seeder
             'location' => 'Mwanza',
             'address' => 'Capri Point, Mwanza',
             'manager_user_id' => $cityOwner->id,
+        ]);
+
+        BranchStatusEvent::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $kariakoo->id,
+            'changed_by_user_id' => $coastOwner->id,
+            'from_status' => 'maintenance',
+            'to_status' => 'active',
+            'reason' => 'Cafe power stabilized and hotspot checks were successful again.',
+            'created_at' => $now->copy()->subDays(2),
+            'updated_at' => $now->copy()->subDays(2),
+        ]);
+
+        BranchStatusEvent::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $mwenge->id,
+            'changed_by_user_id' => $coastOperator->id,
+            'from_status' => 'active',
+            'to_status' => 'maintenance',
+            'reason' => 'Branch requested temporary maintenance while router power issue is investigated.',
+            'created_at' => $now->copy()->subHours(3),
+            'updated_at' => $now->copy()->subHours(3),
         ]);
 
         foreach ([
