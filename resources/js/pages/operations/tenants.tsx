@@ -1,0 +1,183 @@
+import { OpsPageHeader } from '@/components/ops/ops-page-header';
+import { OpsStatCard } from '@/components/ops/ops-stat-card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/formatters';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { BadgeDollarSign, Building2, CircleCheckBig, PencilLine, Plus, Store, UsersRound, WalletCards } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Tenants', href: '/tenants' },
+];
+
+interface Viewer {
+    scope: 'platform' | 'tenant';
+    name: string;
+    role: string;
+    currency?: string | null;
+}
+
+interface Capabilities {
+    can_create: boolean;
+}
+
+interface Summary {
+    total: number;
+    active: number;
+    branches: number;
+    packages: number;
+    successful_revenue: number;
+}
+
+interface TenantRow {
+    id: number;
+    name: string;
+    slug: string;
+    status: string;
+    currency: string | null;
+    country_code: string | null;
+    timezone: string | null;
+    owner: string | null;
+    owner_email: string | null;
+    creator: string | null;
+    branches_count: number;
+    users_count: number;
+    packages_count: number;
+    successful_revenue: number;
+}
+
+interface TenantsPageProps {
+    viewer: Viewer;
+    capabilities: Capabilities;
+    summary: Summary;
+    tenants: TenantRow[];
+}
+
+const tone: Record<string, string> = {
+    active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+    suspended: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    inactive: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
+};
+
+export default function Tenants({ viewer, capabilities, summary, tenants }: TenantsPageProps) {
+    const { flash } = usePage<SharedData>().props;
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Tenants" />
+            <div className="flex flex-1 flex-col gap-6 rounded-xl p-4">
+                <OpsPageHeader
+                    title="Tenant Management"
+                    description="Tenants define who resells on the platform. This workspace keeps their status, ownership, currency, and operational footprint visible in one place."
+                    viewer={viewer}
+                />
+
+                {flash?.success && (
+                    <Alert className="border-emerald-500/30 bg-emerald-500/5 text-emerald-900 dark:text-emerald-100">
+                        <CircleCheckBig className="size-4" />
+                        <AlertTitle>Tenant workflow updated</AlertTitle>
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                {capabilities.can_create && (
+                    <div className="flex justify-end">
+                        <Button asChild className="rounded-xl">
+                            <Link href={route('tenants.create')}>
+                                <Plus className="size-4" />
+                                New tenant
+                            </Link>
+                        </Button>
+                    </div>
+                )}
+
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    <OpsStatCard
+                        label="Total tenants"
+                        value={summary.total.toString()}
+                        hint="Tenants visible in the current workspace scope."
+                        icon={Building2}
+                    />
+                    <OpsStatCard
+                        label="Active tenants"
+                        value={summary.active.toString()}
+                        hint="Tenants currently allowed to operate on the platform."
+                        icon={Store}
+                    />
+                    <OpsStatCard
+                        label="Branches"
+                        value={summary.branches.toString()}
+                        hint="Branch footprint across the visible tenants."
+                        icon={WalletCards}
+                    />
+                    <OpsStatCard
+                        label="Users"
+                        value={tenants.reduce((sum, row) => sum + row.users_count, 0).toString()}
+                        hint="Owners, managers, and operators attached to these tenants."
+                        icon={UsersRound}
+                    />
+                    <OpsStatCard
+                        label="Successful revenue"
+                        value={formatMoney(summary.successful_revenue, viewer.currency)}
+                        hint="Confirmed revenue generated by these tenants so far."
+                        icon={BadgeDollarSign}
+                    />
+                </section>
+
+                <Card className="border-border/70">
+                    <CardHeader>
+                        <CardTitle>Tenant list</CardTitle>
+                        <CardDescription>Ownership, operational footprint, and revenue basics for each visible tenant.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {tenants.length === 0 && (
+                            <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                No tenants are visible in this workspace yet.
+                            </div>
+                        )}
+                        {tenants.map((tenant) => (
+                            <div key={tenant.id} className="border-border/60 rounded-2xl border px-4 py-4">
+                                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="font-semibold">{tenant.name}</p>
+                                            <Badge variant="outline" className={tone[tenant.status] ?? ''}>
+                                                {tenant.status}
+                                            </Badge>
+                                            <Badge variant="outline">{tenant.currency ?? 'No currency'}</Badge>
+                                        </div>
+                                        <p className="text-muted-foreground text-sm">
+                                            {[tenant.slug, tenant.country_code, tenant.timezone].filter(Boolean).join(' • ') ||
+                                                'Tenant metadata not set'}
+                                        </p>
+                                        <p className="text-muted-foreground text-sm">
+                                            Owner: {tenant.owner ?? 'Unassigned'}
+                                            {tenant.owner_email ? ` • ${tenant.owner_email}` : ''}
+                                        </p>
+                                    </div>
+                                    <div className="text-left xl:text-right">
+                                        <p className="text-lg font-semibold">{formatMoney(tenant.successful_revenue, tenant.currency)}</p>
+                                        <p className="text-muted-foreground text-sm">
+                                            {tenant.branches_count} branches • {tenant.packages_count} packages
+                                        </p>
+                                        <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
+                                            <Link href={route('tenants.edit', tenant.id)}>
+                                                <PencilLine className="size-4" />
+                                                Edit
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+        </AppLayout>
+    );
+}

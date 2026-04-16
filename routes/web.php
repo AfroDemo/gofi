@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\BranchIndexController;
+use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageIndexController;
 use App\Http\Controllers\PackageManagementController;
+use App\Http\Controllers\TenantIndexController;
+use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
 use App\Http\Controllers\TransactionShowController;
 use App\Http\Controllers\VoucherBatchController;
@@ -17,6 +21,16 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('tenants', TenantIndexController::class)->name('tenants.index');
+    Route::get('tenants/create', [TenantManagementController::class, 'create'])->name('tenants.create');
+    Route::post('tenants', [TenantManagementController::class, 'store'])->name('tenants.store');
+    Route::get('tenants/{tenant}/edit', [TenantManagementController::class, 'edit'])->name('tenants.edit');
+    Route::patch('tenants/{tenant}', [TenantManagementController::class, 'update'])->name('tenants.update');
+    Route::get('branches', BranchIndexController::class)->name('branches.index');
+    Route::get('branches/create', [BranchManagementController::class, 'create'])->name('branches.create');
+    Route::post('branches', [BranchManagementController::class, 'store'])->name('branches.store');
+    Route::get('branches/{branch}/edit', [BranchManagementController::class, 'edit'])->name('branches.edit');
+    Route::patch('branches/{branch}', [BranchManagementController::class, 'update'])->name('branches.update');
     Route::get('packages', PackageIndexController::class)->name('packages.index');
     Route::get('packages/create', [PackageManagementController::class, 'create'])->name('packages.create');
     Route::post('packages', [PackageManagementController::class, 'store'])->name('packages.store');
