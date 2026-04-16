@@ -5,6 +5,7 @@ use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageIndexController;
 use App\Http\Controllers\PackageManagementController;
+use App\Http\Controllers\PortalController;
 use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
@@ -18,6 +19,13 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
+
+Route::prefix('portal/{tenantSlug}/{branchCode}')->group(function () {
+    Route::get('/', [PortalController::class, 'show'])->name('portal.show');
+    Route::post('/checkout', [PortalController::class, 'checkout'])->name('portal.checkout');
+    Route::post('/voucher', [PortalController::class, 'redeemVoucher'])->name('portal.voucher.redeem');
+    Route::get('/transactions/{reference}', [PortalController::class, 'showTransaction'])->name('portal.transactions.show');
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
