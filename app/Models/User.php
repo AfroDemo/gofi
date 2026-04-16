@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\PlatformRole;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -21,6 +24,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'platform_role',
     ];
 
     /**
@@ -43,6 +47,55 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'platform_role' => PlatformRole::class,
         ];
+    }
+
+    public function tenantMemberships(): HasMany
+    {
+        return $this->hasMany(TenantMembership::class);
+    }
+
+    public function tenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'tenant_user')
+            ->using(TenantMembership::class)
+            ->withPivot(['role', 'is_primary'])
+            ->withTimestamps();
+    }
+
+    public function ownedTenants(): HasMany
+    {
+        return $this->hasMany(Tenant::class, 'owner_user_id');
+    }
+
+    public function managedBranches(): HasMany
+    {
+        return $this->hasMany(Branch::class, 'manager_user_id');
+    }
+
+    public function createdVouchers(): HasMany
+    {
+        return $this->hasMany(Voucher::class, 'created_by_user_id');
+    }
+
+    public function redeemedVouchers(): HasMany
+    {
+        return $this->hasMany(Voucher::class, 'redeemed_by_user_id');
+    }
+
+    public function initiatedTransactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'initiated_by_user_id');
+    }
+
+    public function authorizedSessions(): HasMany
+    {
+        return $this->hasMany(HotspotSession::class, 'authorized_by_user_id');
+    }
+
+    public function isPlatformAdmin(): bool
+    {
+        return ($this->platform_role ?? PlatformRole::TenantUser) === PlatformRole::SuperAdmin;
     }
 }
