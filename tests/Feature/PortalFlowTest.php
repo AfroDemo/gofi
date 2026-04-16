@@ -7,10 +7,14 @@ use App\Enums\TransactionSource;
 use App\Enums\TransactionStatus;
 use App\Enums\VoucherStatus;
 use App\Models\AccessPackage;
+use App\Models\Branch;
+use App\Models\RevenueShareRule;
+use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\Voucher;
 use Database\Seeders\DemoPlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -38,6 +42,26 @@ class PortalFlowTest extends TestCase
         $this->seed(DemoPlatformSeeder::class);
         $package = AccessPackage::query()->where('name', 'Coast Quick Hour')->firstOrFail();
 
+        config([
+            'payment.gateway' => 'palmpesa',
+            'payment.fallback_gateway' => 'snippe',
+            'payment.palmpesa.enabled' => true,
+            'payment.snippe.enabled' => false,
+        ]);
+
+        Http::fake([
+            'https://palmpesa.drmlelwa.co.tz/api/pay-via-mobile' => Http::response([
+                'message' => "Payment request sent to user's phone",
+                'order_id' => 'SELCOM17458294939723',
+                'response' => [
+                    'reference' => 'S19997158895',
+                    'transid' => 'TXN1745829493',
+                    'resultcode' => '000',
+                    'result' => 'SUCCESS',
+                ],
+            ], 200),
+        ]);
+
         $response = $this->post(route('portal.checkout', ['tenantSlug' => 'coastfi-networks', 'branchCode' => 'KRK']), [
             'package_id' => $package->id,
             'phone_number' => '+255 712 000 555',
@@ -54,11 +78,84 @@ class PortalFlowTest extends TestCase
         $this->assertSame(TransactionSource::MobileMoney, $transaction->source);
         $this->assertSame(TransactionStatus::Pending, $transaction->status);
         $this->assertSame('255712000555', $transaction->phone_number);
+        $this->assertSame('SELCOM17458294939723', $transaction->provider_reference);
         $this->assertDatabaseHas('transactions', [
             'id' => $transaction->id,
             'tenant_id' => $package->tenant_id,
             'branch_id' => $package->branch_id,
             'status' => TransactionStatus::Pending->value,
+        ]);
+    }
+
+    public function test_portal_can_refresh_pending_payment_and_activate_session(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $tenant = Tenant::query()->where('slug', 'coastfi-networks')->firstOrFail();
+        $branch = Branch::query()->where('tenant_id', $tenant->id)->where('code', 'KRK')->firstOrFail();
+        $package = AccessPackage::query()->where('tenant_id', $tenant->id)->where('name', 'Coast Quick Hour')->firstOrFail();
+        $rule = RevenueShareRule::query()->where('tenant_id', $tenant->id)->firstOrFail();
+
+        $transaction = Transaction::query()->create([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'access_package_id' => $package->id,
+            'revenue_share_rule_id' => $rule->id,
+            'source' => TransactionSource::MobileMoney,
+            'status' => TransactionStatus::Pending,
+            'reference' => 'PRT-REFRESH-100',
+            'provider_reference' => 'SELCOM-ORDER-100',
+            'phone_number' => '255712000777',
+            'amount' => 1000,
+            'gateway_fee' => 0,
+            'currency' => 'TZS',
+            'metadata' => [
+                'channel' => 'portal',
+                'device_ip_address' => '127.0.0.1',
+                'payment' => [
+                    'gateway' => 'palmpesa',
+                ],
+            ],
+        ]);
+
+        config([
+            'payment.gateway' => 'palmpesa',
+            'payment.fallback_gateway' => 'snippe',
+            'payment.palmpesa.enabled' => true,
+            'payment.snippe.enabled' => false,
+        ]);
+
+        Http::fake([
+            'https://palmpesa.drmlelwa.co.tz/api/order-status' => Http::response([
+                'status' => 'completed',
+                'order_id' => 'SELCOM-ORDER-100',
+                'fee' => 60,
+                'paid_at' => now()->toIso8601String(),
+            ], 200),
+        ]);
+
+        $this->post(route('portal.transactions.refresh', [
+            'tenantSlug' => 'coastfi-networks',
+            'branchCode' => 'KRK',
+            'reference' => $transaction->reference,
+        ]))->assertRedirect();
+
+        $transaction->refresh();
+
+        $this->assertSame(TransactionStatus::Successful, $transaction->status);
+
+        $this->assertDatabaseHas('hotspot_sessions', [
+            'transaction_id' => $transaction->id,
+            'status' => HotspotSessionStatus::Active->value,
+        ]);
+
+        $this->assertDatabaseHas('revenue_allocations', [
+            'transaction_id' => $transaction->id,
+        ]);
+
+        $this->assertDatabaseHas('ledger_entries', [
+            'transaction_id' => $transaction->id,
+            'entry_type' => 'sale',
         ]);
     }
 

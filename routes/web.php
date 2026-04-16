@@ -25,6 +25,7 @@ Route::prefix('portal/{tenantSlug}/{branchCode}')->group(function () {
     Route::post('/checkout', [PortalController::class, 'checkout'])->name('portal.checkout');
     Route::post('/voucher', [PortalController::class, 'redeemVoucher'])->name('portal.voucher.redeem');
     Route::get('/transactions/{reference}', [PortalController::class, 'showTransaction'])->name('portal.transactions.show');
+    Route::post('/transactions/{reference}/refresh', [PortalController::class, 'refreshTransactionStatus'])->name('portal.transactions.refresh');
 });
 
 Route::middleware(['auth'])->group(function () {

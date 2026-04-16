@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatDataLimit, formatMinutes, formatMoney, formatSpeed } from '@/lib/formatters';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { CircleAlert, CreditCard, MapPin, Smartphone, Ticket, Wifi } from 'lucide-react';
 import { FormEvent, useEffect } from 'react';
 
@@ -41,6 +42,7 @@ interface PortalShowProps {
 }
 
 export default function PortalShow({ tenant, branch, packages }: PortalShowProps) {
+    const { flash } = usePage<SharedData>().props;
     const checkoutForm = useForm({
         package_id: packages[0]?.id?.toString() ?? '',
         phone_number: '',
@@ -109,6 +111,14 @@ export default function PortalShow({ tenant, branch, packages }: PortalShowProps
                     </header>
 
                     <main className="mt-6 flex flex-1 flex-col gap-6">
+                        {flash?.error && (
+                            <Alert variant="destructive">
+                                <CircleAlert className="size-4" />
+                                <AlertTitle>Payment issue</AlertTitle>
+                                <AlertDescription>{flash.error}</AlertDescription>
+                            </Alert>
+                        )}
+
                         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                             <div className="gofi-shell px-6 py-7 sm:px-8">
                                 <Badge variant="outline" className="border-primary/20 bg-primary/8 text-primary rounded-full px-3 py-1">

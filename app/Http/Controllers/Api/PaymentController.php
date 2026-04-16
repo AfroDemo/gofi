@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Payments\FulfillSuccessfulTransaction;
 use App\Enums\TransactionSource;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
@@ -15,7 +16,10 @@ use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
-    public function __construct(protected PaymentGatewayManager $paymentGatewayManager) {}
+    public function __construct(
+        protected PaymentGatewayManager $paymentGatewayManager,
+        protected FulfillSuccessfulTransaction $fulfillSuccessfulTransaction,
+    ) {}
 
     public function initiate(Request $request): JsonResponse
     {
@@ -149,10 +153,13 @@ class PaymentController extends Controller
         if (in_array($status, ['successful', 'success', 'paid', 'completed'], true)) {
             $transaction->update([
                 'status' => TransactionStatus::Successful,
+                'provider_reference' => $pollResult['provider_reference'] ?? $transaction->provider_reference,
                 'gateway_fee' => (float) ($pollResult['gateway_fee'] ?? $transaction->gateway_fee),
                 'paid_at' => $transaction->paid_at ?? now(),
                 'confirmed_at' => now(),
             ]);
+
+            $this->fulfillSuccessfulTransaction->execute($transaction);
         } elseif (in_array($status, ['failed', 'cancelled', 'declined'], true)) {
             $transaction->update([
                 'status' => $status === 'cancelled' ? TransactionStatus::Cancelled : TransactionStatus::Failed,

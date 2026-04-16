@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Finance\CreateRevenueAllocation;
+use App\Actions\Payments\FulfillSuccessfulTransaction;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentCallback;
@@ -16,7 +16,7 @@ class WebhookController extends Controller
 {
     public function __construct(
         protected PaymentGatewayManager $paymentGatewayManager,
-        protected CreateRevenueAllocation $createRevenueAllocation,
+        protected FulfillSuccessfulTransaction $fulfillSuccessfulTransaction,
     ) {}
 
     public function palmpesa(Request $request): JsonResponse
@@ -49,8 +49,8 @@ class WebhookController extends Controller
         $transaction = Transaction::query()
             ->when(
                 is_string($reference) && $reference !== '',
-                fn($query) => $query->where('reference', $reference),
-                fn($query) => $query->where('provider_reference', $providerReference)
+                fn ($query) => $query->where('reference', $reference),
+                fn ($query) => $query->where('provider_reference', $providerReference)
             )
             ->first();
 
@@ -62,14 +62,22 @@ class WebhookController extends Controller
         }
 
         DB::transaction(function () use ($transaction, $gatewayName, $normalized, $payload) {
-            $callback = PaymentCallback::query()->create([
-                'transaction_id' => $transaction->id,
-                'provider' => $gatewayName,
-                'event_type' => (string) ($normalized['event_type'] ?? 'payment_update'),
-                'callback_reference' => $normalized['provider_reference'] ?? $normalized['reference'] ?? null,
-                'payload' => $payload,
-                'received_at' => now(),
-            ]);
+            $callbackReference = $normalized['provider_reference']
+                ?? $normalized['reference']
+                ?? sha1(json_encode($payload));
+
+            $callback = PaymentCallback::query()->updateOrCreate(
+                [
+                    'transaction_id' => $transaction->id,
+                    'provider' => $gatewayName,
+                    'event_type' => (string) ($normalized['event_type'] ?? 'payment_update'),
+                    'callback_reference' => (string) $callbackReference,
+                ],
+                [
+                    'payload' => $payload,
+                    'received_at' => now(),
+                ]
+            );
 
             $status = strtolower((string) ($normalized['status'] ?? 'pending'));
 
@@ -82,11 +90,7 @@ class WebhookController extends Controller
                     'confirmed_at' => now(),
                 ]);
 
-                $transaction->refresh();
-
-                if ($transaction->revenueShareRule) {
-                    $this->createRevenueAllocation->execute($transaction, $transaction->revenueShareRule);
-                }
+                $this->fulfillSuccessfulTransaction->execute($transaction);
             } elseif (in_array($status, ['failed', 'declined'], true)) {
                 $transaction->update([
                     'status' => TransactionStatus::Failed,

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDataLimit, formatDateTime, formatMinutes, formatMoney } from '@/lib/formatters';
 import { type SharedData } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CheckCircle2, Clock3, RotateCcw, Smartphone, Ticket, Wifi } from 'lucide-react';
 
 interface TenantInfo {
@@ -113,6 +113,14 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                             </Alert>
                         )}
 
+                        {flash?.error && (
+                            <Alert variant="destructive">
+                                <Ticket className="size-4" />
+                                <AlertTitle>Payment issue</AlertTitle>
+                                <AlertDescription>{flash.error}</AlertDescription>
+                            </Alert>
+                        )}
+
                         <section className="gofi-shell px-6 py-7 sm:px-8">
                             <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant="outline" className={tone[transaction.source] ?? ''}>
@@ -149,6 +157,27 @@ export default function PortalTransactionStatus({ tenant, branch, transaction }:
                                     <p className="mt-2 font-medium">{transaction.voucher_code || 'Not used'}</p>
                                 </div>
                             </div>
+
+                            {transaction.status === 'pending' && (
+                                <div className="mt-6">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl"
+                                        onClick={() =>
+                                            router.post(
+                                                route('portal.transactions.refresh', {
+                                                    tenantSlug: tenant.slug,
+                                                    branchCode: branch.code,
+                                                    reference: transaction.reference,
+                                                })
+                                            )
+                                        }
+                                    >
+                                        Check payment status
+                                    </Button>
+                                </div>
+                            )}
                         </section>
 
                         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">

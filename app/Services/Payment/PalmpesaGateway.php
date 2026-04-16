@@ -15,30 +15,50 @@ class PalmpesaGateway implements HotspotPaymentGateway
 
     public function initiatePayment(Transaction $transaction, array $payload = []): array
     {
+        $buyerName = $payload['name'] ?? 'GoFi Customer';
+        $buyerEmail = $payload['email'] ?? 'portal+'.$transaction->reference.'@gofi.local';
+        $buyerAddress = $payload['address'] ?? 'Dar es Salaam';
+        $buyerPostcode = $payload['postcode'] ?? '00000';
+        $buyerUuid = $payload['buyer_uuid'] ?? $transaction->id;
+        $phoneNumber = $payload['phone_number'] ?? $transaction->phone_number;
+
         $response = Http::timeout(20)
             ->acceptJson()
             ->withToken((string) config('payment.palmpesa.api_token', ''))
             ->post(
                 $this->url((string) config('payment.palmpesa.initiate_path', '/api/pay-via-mobile')),
                 [
+                    'user_id' => (string) config('payment.palmpesa.user_id'),
+                    'name' => $buyerName,
+                    'email' => $buyerEmail,
+                    'phone' => $phoneNumber,
                     'amount' => (float) $transaction->amount,
-                    'phone_number' => $payload['phone_number'] ?? $transaction->phone_number,
-                    'currency' => $transaction->currency,
-                    'reference' => $transaction->reference,
-                    'vendor' => config('payment.palmpesa.vendor'),
-                    'user_id' => config('payment.palmpesa.user_id'),
-                    'callback_url' => $this->callbackUrl(),
+                    'transaction_id' => $transaction->reference,
+                    'address' => $buyerAddress,
+                    'postcode' => $buyerPostcode,
+                    'buyer_uuid' => $buyerUuid,
                 ]
             );
 
         $data = $response->json() ?? [];
-        $status = strtolower((string) ($data['status'] ?? $data['payment_status'] ?? 'pending'));
+        $status = strtolower((string) (
+            $data['status']
+            ?? $data['payment_status']
+            ?? data_get($data, 'response.result')
+            ?? 'pending'
+        ));
         $success = $response->successful() && in_array($status, ['pending', 'processing', 'successful', 'success', 'queued'], true);
 
         return [
             'success' => $success,
             'status' => $success ? 'pending' : 'failed',
-            'provider_reference' => $data['transaction_id'] ?? $data['provider_reference'] ?? $data['reference'] ?? null,
+            'provider_reference' => $data['order_id']
+                ?? data_get($data, 'response.reference')
+                ?? data_get($data, 'response.transid')
+                ?? $data['transaction_id']
+                ?? $data['provider_reference']
+                ?? $data['reference']
+                ?? null,
             'gateway_fee' => (float) ($data['fee'] ?? 0),
             'message' => $data['message'] ?? ($success ? 'PalmPesa accepted payment request.' : 'PalmPesa rejected payment request.'),
             'raw' => $data,
@@ -53,17 +73,27 @@ class PalmpesaGateway implements HotspotPaymentGateway
             ->post(
                 $this->url((string) config('payment.palmpesa.status_path', '/api/order-status')),
                 [
-                    'reference' => $providerReference,
+                    'order_id' => $providerReference,
                 ]
             );
 
         $data = $response->json() ?? [];
-        $status = strtolower((string) ($data['status'] ?? $data['payment_status'] ?? 'pending'));
+        $status = strtolower((string) (
+            $data['status']
+            ?? $data['payment_status']
+            ?? data_get($data, 'response.result')
+            ?? data_get($data, 'result')
+            ?? 'pending'
+        ));
 
         return [
             'success' => $response->successful(),
             'status' => $status,
-            'provider_reference' => $data['transaction_id'] ?? $providerReference,
+            'provider_reference' => $data['order_id']
+                ?? data_get($data, 'response.reference')
+                ?? data_get($data, 'response.transid')
+                ?? $data['transaction_id']
+                ?? $providerReference,
             'gateway_fee' => (float) ($data['fee'] ?? 0),
             'paid_at' => $data['paid_at'] ?? $data['completed_at'] ?? null,
             'raw' => $data,
@@ -95,8 +125,11 @@ class PalmpesaGateway implements HotspotPaymentGateway
         $status = strtolower((string) ($payload['status'] ?? $payload['payment_status'] ?? 'pending'));
 
         return [
-            'reference' => $payload['reference'] ?? $payload['merchant_reference'] ?? null,
-            'provider_reference' => $payload['transaction_id'] ?? $payload['provider_reference'] ?? null,
+            'reference' => $payload['reference'] ?? $payload['merchant_reference'] ?? $payload['transaction_id'] ?? null,
+            'provider_reference' => $payload['order_id']
+                ?? $payload['transaction_id']
+                ?? $payload['provider_reference']
+                ?? null,
             'event_type' => $payload['event'] ?? 'payment_update',
             'status' => $status,
             'gateway_fee' => (float) ($payload['fee'] ?? 0),
@@ -107,20 +140,9 @@ class PalmpesaGateway implements HotspotPaymentGateway
     protected function url(string $path): string
     {
         $baseUrl = rtrim((string) config('payment.palmpesa.base_url', ''), '/');
-        $normalizedPath = str_starts_with($path, '/') ? $path : '/' . $path;
+        $normalizedPath = str_starts_with($path, '/') ? $path : '/'.$path;
 
-        return $baseUrl . $normalizedPath;
-    }
-
-    protected function callbackUrl(): string
-    {
-        $callbackPath = (string) config('payment.palmpesa.callback_url', '/api/v1/webhooks/palmpesa');
-
-        if (str_starts_with($callbackPath, 'http://') || str_starts_with($callbackPath, 'https://')) {
-            return $callbackPath;
-        }
-
-        return url($callbackPath);
+        return $baseUrl.$normalizedPath;
     }
 
     protected function headerValue(array $headers, string $key): ?string

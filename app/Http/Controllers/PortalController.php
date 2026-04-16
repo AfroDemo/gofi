@@ -2,22 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Finance\CreateRevenueAllocation;
+use App\Actions\Payments\FulfillSuccessfulTransaction;
 use App\Enums\BranchStatus;
-use App\Enums\HotspotSessionStatus;
-use App\Enums\LedgerDirection;
 use App\Enums\TenantStatus;
 use App\Enums\TransactionSource;
 use App\Enums\TransactionStatus;
 use App\Enums\VoucherStatus;
 use App\Models\AccessPackage;
 use App\Models\Branch;
-use App\Models\HotspotSession;
-use App\Models\LedgerEntry;
 use App\Models\RevenueShareRule;
 use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\Voucher;
+use App\Services\Payment\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +26,8 @@ use Inertia\Response;
 class PortalController extends Controller
 {
     public function __construct(
-        protected CreateRevenueAllocation $createRevenueAllocation,
+        protected FulfillSuccessfulTransaction $fulfillSuccessfulTransaction,
+        protected PaymentGatewayManager $paymentGatewayManager,
     ) {}
 
     public function show(string $tenantSlug, string $branchCode): Response
@@ -109,7 +107,6 @@ class PortalController extends Controller
             'source' => TransactionSource::MobileMoney,
             'status' => TransactionStatus::Pending,
             'reference' => $reference,
-            'provider_reference' => $reference,
             'phone_number' => $phoneNumber,
             'amount' => $package->price,
             'gateway_fee' => 0,
@@ -118,8 +115,62 @@ class PortalController extends Controller
                 'channel' => 'portal',
                 'flow' => 'mobile_money_checkout',
                 'branch_code' => $branch->code,
+                'device_ip_address' => $request->ip(),
             ],
         ]);
+
+        $result = $this->paymentGatewayManager->initiateWithFallback($transaction, [
+            'phone_number' => $phoneNumber,
+            'name' => 'GoFi Customer',
+            'email' => 'portal+'.$reference.'@gofi.local',
+            'address' => $branch->location ?: $branch->name,
+            'postcode' => '00000',
+            'buyer_uuid' => $transaction->id,
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            $transaction->update([
+                'status' => TransactionStatus::Failed,
+                'metadata' => $this->mergeMetadata($transaction->metadata, [
+                    'payment' => [
+                        'selection' => $result['selection'] ?? null,
+                        'attempts' => $result['attempts'] ?? [],
+                        'message' => $result['message'] ?? 'All gateways failed.',
+                    ],
+                ]),
+            ]);
+
+            return to_route('portal.transactions.show', [
+                'tenantSlug' => $tenant->slug,
+                'branchCode' => $branch->code,
+                'reference' => $transaction->reference,
+            ])->with('error', $result['message'] ?? 'Payment initiation failed.');
+        }
+
+        $status = strtolower((string) ($result['status'] ?? 'pending'));
+
+        $transaction->update([
+            'status' => in_array($status, ['successful', 'success', 'paid', 'completed'], true)
+                ? TransactionStatus::Successful
+                : TransactionStatus::Pending,
+            'provider_reference' => $result['provider_reference'] ?? null,
+            'gateway_fee' => (float) ($result['gateway_fee'] ?? 0),
+            'paid_at' => in_array($status, ['successful', 'success', 'paid', 'completed'], true) ? now() : null,
+            'confirmed_at' => in_array($status, ['successful', 'success', 'paid', 'completed'], true) ? now() : null,
+            'metadata' => $this->mergeMetadata($transaction->metadata, [
+                'payment' => [
+                    'gateway' => $result['gateway'] ?? null,
+                    'selection' => $result['selection'] ?? null,
+                    'attempts' => $result['attempts'] ?? [],
+                    'message' => $result['message'] ?? 'Payment initiated.',
+                    'raw' => $result['raw'] ?? null,
+                ],
+            ]),
+        ]);
+
+        if ($transaction->status === TransactionStatus::Successful) {
+            $this->fulfillSuccessfulTransaction->execute($transaction);
+        }
 
         return to_route('portal.transactions.show', [
             'tenantSlug' => $tenant->slug,
@@ -208,13 +259,10 @@ class PortalController extends Controller
                     'channel' => 'portal',
                     'flow' => 'voucher_redemption',
                     'branch_code' => $branch->code,
+                    'device_mac_address' => $deviceMacAddress,
+                    'device_ip_address' => $request->ip(),
                 ],
             ]);
-
-            if ($rule) {
-                $allocation = $this->createRevenueAllocation->execute($transaction, $rule);
-                $this->appendLedgerEntry($transaction, (float) $allocation->tenant_amount);
-            }
 
             $voucher->update([
                 'status' => VoucherStatus::Used,
@@ -222,23 +270,7 @@ class PortalController extends Controller
                 'redeemed_at' => now(),
             ]);
 
-            HotspotSession::query()->create([
-                'tenant_id' => $tenant->id,
-                'branch_id' => $branch->id,
-                'access_package_id' => $package?->id,
-                'voucher_id' => $voucher->id,
-                'transaction_id' => $transaction->id,
-                'device_mac_address' => $deviceMacAddress,
-                'device_ip_address' => $request->ip(),
-                'status' => HotspotSessionStatus::Active,
-                'duration_minutes' => $profile->duration_minutes ?? $package?->duration_minutes,
-                'data_limit_mb' => $profile->data_limit_mb ?? $package?->data_limit_mb,
-                'data_used_mb' => 0,
-                'started_at' => now(),
-                'expires_at' => ($profile->duration_minutes ?? $package?->duration_minutes)
-                    ? now()->addMinutes($profile->duration_minutes ?? $package?->duration_minutes)
-                    : null,
-            ]);
+            $this->fulfillSuccessfulTransaction->execute($transaction);
 
             return $transaction;
         });
@@ -300,6 +332,68 @@ class PortalController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    public function refreshTransactionStatus(string $tenantSlug, string $branchCode, string $reference): RedirectResponse
+    {
+        [$tenant, $branch] = $this->resolvePortalWorkspace($tenantSlug, $branchCode);
+
+        $transaction = Transaction::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('branch_id', $branch->id)
+            ->where('reference', $reference)
+            ->firstOrFail();
+
+        if ($transaction->status !== TransactionStatus::Pending || ! $transaction->provider_reference) {
+            return back()->with('success', 'Transaction status is already up to date.');
+        }
+
+        $gatewayName = data_get($transaction->metadata, 'payment.gateway')
+            ?? data_get($transaction->metadata, 'payment.selection.active')
+            ?? $this->paymentGatewayManager->activeName();
+
+        $gateway = $this->paymentGatewayManager->gateway((string) $gatewayName, allowDisabled: true);
+        $pollResult = $gateway->checkPaymentStatus((string) $transaction->provider_reference);
+        $status = strtolower((string) ($pollResult['status'] ?? 'pending'));
+
+        $transaction->update([
+            'status' => match (true) {
+                in_array($status, ['successful', 'success', 'paid', 'completed'], true) => TransactionStatus::Successful,
+                in_array($status, ['cancelled', 'canceled'], true) => TransactionStatus::Cancelled,
+                in_array($status, ['failed', 'declined'], true) => TransactionStatus::Failed,
+                default => TransactionStatus::Pending,
+            },
+            'provider_reference' => $pollResult['provider_reference'] ?? $transaction->provider_reference,
+            'gateway_fee' => (float) ($pollResult['gateway_fee'] ?? $transaction->gateway_fee),
+            'paid_at' => in_array($status, ['successful', 'success', 'paid', 'completed'], true)
+                ? ($transaction->paid_at ?? now())
+                : $transaction->paid_at,
+            'confirmed_at' => in_array($status, ['successful', 'success', 'paid', 'completed'], true)
+                ? ($transaction->confirmed_at ?? now())
+                : $transaction->confirmed_at,
+            'metadata' => $this->mergeMetadata($transaction->metadata, [
+                'payment' => [
+                    'last_poll' => [
+                        'gateway' => $gatewayName,
+                        'status' => $status,
+                        'checked_at' => now()->toIso8601String(),
+                        'raw' => $pollResult['raw'] ?? null,
+                    ],
+                ],
+            ]),
+        ]);
+
+        if ($transaction->status === TransactionStatus::Successful) {
+            $this->fulfillSuccessfulTransaction->execute($transaction);
+
+            return back()->with('success', 'Payment confirmed and access session activated.');
+        }
+
+        if ($transaction->status === TransactionStatus::Pending) {
+            return back()->with('success', 'Payment is still pending. Ask the customer to complete the mobile-money approval prompt.');
+        }
+
+        return back()->with('error', 'Payment did not complete successfully.');
     }
 
     /**
@@ -378,23 +472,10 @@ class PortalController extends Controller
             ->first();
     }
 
-    protected function appendLedgerEntry(Transaction $transaction, float $tenantAmount): void
+    protected function mergeMetadata(mixed $metadata, array $additions): array
     {
-        $currentBalance = (float) (LedgerEntry::query()
-            ->where('tenant_id', $transaction->tenant_id)
-            ->latest('id')
-            ->value('balance_after') ?? 0);
+        $base = is_array($metadata) ? $metadata : [];
 
-        LedgerEntry::query()->create([
-            'tenant_id' => $transaction->tenant_id,
-            'transaction_id' => $transaction->id,
-            'direction' => LedgerDirection::Credit,
-            'entry_type' => 'sale',
-            'amount' => $tenantAmount,
-            'currency' => $transaction->currency,
-            'balance_after' => $currentBalance + $tenantAmount,
-            'description' => 'Tenant share for '.$transaction->reference,
-            'posted_at' => $transaction->confirmed_at ?? $transaction->created_at ?? now(),
-        ]);
+        return array_replace_recursive($base, $additions);
     }
 }
