@@ -1,3 +1,4 @@
+import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,11 @@ interface TransactionRow {
 
 interface TransactionsPageProps {
     viewer: Viewer;
+    filters: {
+        search: string;
+        status: string;
+        source: string;
+    };
     summary: Summary;
     sourceMix: SourceMixRow[];
     transactions: TransactionRow[];
@@ -70,7 +76,7 @@ const tone: Record<string, string> = {
     manual: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
-export default function Transactions({ viewer, summary, sourceMix, transactions }: TransactionsPageProps) {
+export default function Transactions({ viewer, filters, summary, sourceMix, transactions }: TransactionsPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Transactions" />
@@ -79,6 +85,38 @@ export default function Transactions({ viewer, summary, sourceMix, transactions 
                     title="Transactions"
                     description="This is the start of the real payments and settlements surface: confirmed sales, pending callbacks, channel mix, and revenue splits all come from our actual domain records."
                     viewer={viewer}
+                />
+
+                <OpsFilters
+                    search={filters.search}
+                    searchPlaceholder="Search reference, phone, package, branch, tenant, or operator"
+                    values={{ status: filters.status, source: filters.source }}
+                    fields={[
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            placeholder: 'All statuses',
+                            options: [
+                                { label: 'All statuses', value: 'all' },
+                                { label: 'Successful', value: 'successful' },
+                                { label: 'Pending', value: 'pending' },
+                                { label: 'Failed', value: 'failed' },
+                                { label: 'Cancelled', value: 'cancelled' },
+                            ],
+                        },
+                        {
+                            key: 'source',
+                            label: 'Source',
+                            placeholder: 'All sources',
+                            options: [
+                                { label: 'All sources', value: 'all' },
+                                { label: 'Mobile money', value: 'mobile_money' },
+                                { label: 'Voucher', value: 'voucher' },
+                                { label: 'Manual', value: 'manual' },
+                            ],
+                        },
+                    ]}
+                    resultLabel={`${transactions.length} transaction matches in the current workspace.`}
                 />
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -121,6 +159,11 @@ export default function Transactions({ viewer, summary, sourceMix, transactions 
                             <CardDescription>Latest transaction records across mobile money and voucher-based access.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {transactions.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                    No transactions matched the current filters.
+                                </div>
+                            )}
                             {transactions.map((transaction) => (
                                 <div key={transaction.id} className="border-border/60 rounded-2xl border px-4 py-4">
                                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -180,6 +223,11 @@ export default function Transactions({ viewer, summary, sourceMix, transactions 
                             <CardDescription>Which payment rails are carrying the current sales volume.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {sourceMix.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
+                                    Channel mix will appear once transactions match the active filters.
+                                </div>
+                            )}
                             {sourceMix.map((item) => (
                                 <div key={item.source} className="border-border/60 flex items-center justify-between rounded-xl border px-4 py-3">
                                     <div>

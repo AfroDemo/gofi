@@ -1,3 +1,4 @@
+import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@ interface VoucherProfileRow {
     branch: string | null;
     package: string | null;
     price: number;
+    currency: string | null;
     duration_minutes: number | null;
     data_limit_mb: number | null;
     expires_in_days: number | null;
@@ -61,6 +63,10 @@ interface VoucherRow {
 
 interface VouchersPageProps {
     viewer: Viewer;
+    filters: {
+        search: string;
+        status: string;
+    };
     summary: Summary;
     profiles: VoucherProfileRow[];
     vouchers: VoucherRow[];
@@ -74,7 +80,7 @@ const statusTone: Record<string, string> = {
     cancelled: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
 };
 
-export default function Vouchers({ viewer, summary, profiles, vouchers }: VouchersPageProps) {
+export default function Vouchers({ viewer, filters, summary, profiles, vouchers }: VouchersPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Vouchers" />
@@ -83,6 +89,28 @@ export default function Vouchers({ viewer, summary, profiles, vouchers }: Vouche
                     title="Voucher Operations"
                     description="Voucher inventory is one of the most practical offline-friendly flows in Go-Fi. These screens already read from the real voucher, voucher profile, package, and branch records."
                     viewer={viewer}
+                />
+
+                <OpsFilters
+                    search={filters.search}
+                    searchPlaceholder="Search voucher code, profile, package, branch, or operator"
+                    values={{ status: filters.status }}
+                    fields={[
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            placeholder: 'All statuses',
+                            options: [
+                                { label: 'All statuses', value: 'all' },
+                                { label: 'Unused', value: 'unused' },
+                                { label: 'Active', value: 'active' },
+                                { label: 'Used', value: 'used' },
+                                { label: 'Expired', value: 'expired' },
+                                { label: 'Cancelled', value: 'cancelled' },
+                            ],
+                        },
+                    ]}
+                    resultLabel={`${vouchers.length} voucher matches in the current workspace.`}
                 />
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -115,6 +143,11 @@ export default function Vouchers({ viewer, summary, profiles, vouchers }: Vouche
                             <CardDescription>These are the reusable templates that shape printed or agent-issued voucher stock.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {profiles.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                    No voucher profiles are tied to the current filter result.
+                                </div>
+                            )}
                             {profiles.map((profile) => (
                                 <div key={profile.id} className="border-border/60 rounded-2xl border px-4 py-4">
                                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -131,7 +164,7 @@ export default function Vouchers({ viewer, summary, profiles, vouchers }: Vouche
                                             </p>
                                         </div>
                                         <div className="text-left xl:text-right">
-                                            <p className="text-lg font-semibold">{formatMoney(profile.price, 'TZS')}</p>
+                                            <p className="text-lg font-semibold">{formatMoney(profile.price, profile.currency)}</p>
                                             <p className="text-muted-foreground text-sm">{profile.total_count} vouchers created</p>
                                         </div>
                                     </div>
@@ -169,6 +202,11 @@ export default function Vouchers({ viewer, summary, profiles, vouchers }: Vouche
                             <CardDescription>Recent voucher codes and their current lifecycle status.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {vouchers.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                    No vouchers matched the current filters.
+                                </div>
+                            )}
                             {vouchers.map((voucher) => (
                                 <div key={voucher.id} className="border-border/60 rounded-2xl border px-4 py-4">
                                     <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">

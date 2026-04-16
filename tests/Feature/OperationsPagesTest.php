@@ -71,4 +71,45 @@ class OperationsPagesTest extends TestCase
                 ->where('transactions.0.tenant', 'CoastFi Networks')
             );
     }
+
+    public function test_operations_pages_apply_filters_without_breaking_tenant_scope(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $admin = User::query()->where('email', 'admin@gofi.test')->firstOrFail();
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get('/packages?type=mixed')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/packages', false)
+                ->where('filters.type', 'mixed')
+                ->where('summary.total', 2)
+                ->has('packages', 2)
+            );
+
+        $this->actingAs($owner)
+            ->get('/vouchers?status=unused')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/vouchers', false)
+                ->where('filters.status', 'unused')
+                ->where('summary.total', 2)
+                ->where('summary.unused', 2)
+                ->has('vouchers', 2)
+                ->where('vouchers.0.tenant', 'CoastFi Networks')
+            );
+
+        $this->actingAs($owner)
+            ->get('/transactions?status=pending')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/transactions', false)
+                ->where('filters.status', 'pending')
+                ->where('summary.pending_count', 1)
+                ->has('transactions', 1)
+                ->where('transactions.0.reference', 'TXN-1003')
+            );
+    }
 }

@@ -1,3 +1,4 @@
+import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -54,12 +55,17 @@ interface PackageRow {
 
 interface PackagesPageProps {
     viewer: Viewer;
+    filters: {
+        search: string;
+        status: string;
+        type: string;
+    };
     summary: Summary;
     typeMix: TypeMixRow[];
     packages: PackageRow[];
 }
 
-export default function Packages({ viewer, summary, typeMix, packages }: PackagesPageProps) {
+export default function Packages({ viewer, filters, summary, typeMix, packages }: PackagesPageProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Packages" />
@@ -68,6 +74,36 @@ export default function Packages({ viewer, summary, typeMix, packages }: Package
                     title="Access Packages"
                     description="Real package inventory from the live Go-Fi domain model. This is where duration, data cap, speed profile, branch availability, and sales performance begin to converge."
                     viewer={viewer}
+                />
+
+                <OpsFilters
+                    search={filters.search}
+                    searchPlaceholder="Search package, branch, tenant, or description"
+                    values={{ status: filters.status, type: filters.type }}
+                    fields={[
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            placeholder: 'All statuses',
+                            options: [
+                                { label: 'All statuses', value: 'all' },
+                                { label: 'Active only', value: 'active' },
+                                { label: 'Inactive only', value: 'inactive' },
+                            ],
+                        },
+                        {
+                            key: 'type',
+                            label: 'Type',
+                            placeholder: 'All types',
+                            options: [
+                                { label: 'All types', value: 'all' },
+                                { label: 'Time', value: 'time' },
+                                { label: 'Data', value: 'data' },
+                                { label: 'Mixed', value: 'mixed' },
+                            ],
+                        },
+                    ]}
+                    resultLabel={`${packages.length} package matches in the current workspace.`}
                 />
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -110,6 +146,11 @@ export default function Packages({ viewer, summary, typeMix, packages }: Package
                             <CardDescription>Read-only for now, but already backed by real package, branch, and sales records.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {packages.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                    No packages matched the current filters.
+                                </div>
+                            )}
                             {packages.map((item) => (
                                 <div key={item.id} className="border-border/60 rounded-2xl border px-4 py-4">
                                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -171,6 +212,11 @@ export default function Packages({ viewer, summary, typeMix, packages }: Package
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {typeMix.length === 0 && (
+                                <div className="border-border/60 text-muted-foreground rounded-xl border border-dashed px-4 py-8 text-center text-sm">
+                                    Type mix will appear once packages match the active filters.
+                                </div>
+                            )}
                             {typeMix.map((item) => (
                                 <div key={item.type} className="border-border/60 flex items-center justify-between rounded-xl border px-4 py-3">
                                     <div>

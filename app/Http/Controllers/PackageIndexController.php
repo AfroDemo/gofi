@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\AccessPackage;
-use App\Models\Transaction;
-use App\Models\VoucherProfile;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,9 +18,34 @@ class PackageIndexController extends Controller
     {
         $scope = $this->resolveWorkspaceScope($request);
         $tenantIds = $scope['tenant_ids'];
+        $filters = [
+            'search' => trim((string) $request->string('search')),
+            'status' => in_array($request->string('status')->toString(), ['all', 'active', 'inactive'], true)
+                ? $request->string('status')->toString()
+                : 'all',
+            'type' => in_array($request->string('type')->toString(), ['all', 'time', 'data', 'mixed'], true)
+                ? $request->string('type')->toString()
+                : 'all',
+        ];
 
         $packages = AccessPackage::query()
             ->whereIn('tenant_id', $tenantIds)
+            ->when($filters['search'] !== '', function (Builder $query) use ($filters) {
+                $search = '%'.$filters['search'].'%';
+
+                $query->where(function (Builder $nested) use ($search) {
+                    $nested
+                        ->where('name', 'like', $search)
+                        ->orWhere('description', 'like', $search)
+                        ->orWhereHas('tenant', fn (Builder $tenant) => $tenant->where('name', 'like', $search))
+                        ->orWhereHas('branch', fn (Builder $branch) => $branch
+                            ->where('name', 'like', $search)
+                            ->orWhere('location', 'like', $search));
+                });
+            })
+            ->when($filters['status'] === 'active', fn (Builder $query) => $query->where('is_active', true))
+            ->when($filters['status'] === 'inactive', fn (Builder $query) => $query->where('is_active', false))
+            ->when($filters['type'] !== 'all', fn (Builder $query) => $query->where('package_type', $filters['type']))
             ->with(['tenant:id,name', 'branch:id,name,location'])
             ->withCount('voucherProfiles')
             ->withCount([
@@ -49,15 +72,13 @@ class PackageIndexController extends Controller
 
         return Inertia::render('operations/packages', [
             'viewer' => $scope['viewer'],
+            'filters' => $filters,
             'summary' => [
                 'total' => $packages->count(),
                 'active' => $packages->where('is_active', true)->count(),
-                'voucher_profiles' => VoucherProfile::query()->whereIn('tenant_id', $tenantIds)->count(),
+                'voucher_profiles' => (int) $packages->sum('voucher_profiles_count'),
                 'branch_coverage' => $packages->pluck('branch_id')->filter()->unique()->count(),
-                'successful_revenue' => (float) Transaction::query()
-                    ->whereIn('tenant_id', $tenantIds)
-                    ->where('status', TransactionStatus::Successful)
-                    ->sum('amount'),
+                'successful_revenue' => (float) $packages->sum(fn (AccessPackage $package) => (float) ($package->successful_revenue ?? 0)),
             ],
             'typeMix' => $typeMix,
             'packages' => $packages->map(fn (AccessPackage $package) => [

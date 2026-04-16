@@ -19,9 +19,30 @@ class VoucherIndexController extends Controller
     {
         $scope = $this->resolveWorkspaceScope($request);
         $tenantIds = $scope['tenant_ids'];
+        $filters = [
+            'search' => trim((string) $request->string('search')),
+            'status' => in_array($request->string('status')->toString(), ['all', 'unused', 'active', 'used', 'expired', 'cancelled'], true)
+                ? $request->string('status')->toString()
+                : 'all',
+        ];
 
         $vouchers = Voucher::query()
             ->whereIn('tenant_id', $tenantIds)
+            ->when($filters['search'] !== '', function (Builder $query) use ($filters) {
+                $search = '%'.$filters['search'].'%';
+
+                $query->where(function (Builder $nested) use ($search) {
+                    $nested
+                        ->where('code', 'like', $search)
+                        ->orWhere('locked_mac_address', 'like', $search)
+                        ->orWhereHas('tenant', fn (Builder $tenant) => $tenant->where('name', 'like', $search))
+                        ->orWhereHas('branch', fn (Builder $branch) => $branch->where('name', 'like', $search))
+                        ->orWhereHas('accessPackage', fn (Builder $package) => $package->where('name', 'like', $search))
+                        ->orWhereHas('voucherProfile', fn (Builder $profile) => $profile->where('name', 'like', $search))
+                        ->orWhereHas('creator', fn (Builder $creator) => $creator->where('name', 'like', $search));
+                });
+            })
+            ->when($filters['status'] !== 'all', fn (Builder $query) => $query->where('status', $filters['status']))
             ->with([
                 'tenant:id,name',
                 'branch:id,name',
@@ -33,8 +54,8 @@ class VoucherIndexController extends Controller
             ->get();
 
         $profiles = VoucherProfile::query()
-            ->whereIn('tenant_id', $tenantIds)
-            ->with(['tenant:id,name', 'branch:id,name', 'accessPackage:id,name'])
+            ->whereIn('id', $vouchers->pluck('voucher_profile_id')->filter()->unique())
+            ->with(['tenant:id,name,currency', 'branch:id,name', 'accessPackage:id,name,currency'])
             ->withCount('vouchers')
             ->withCount([
                 'vouchers as unused_count' => fn (Builder $query) => $query->where('status', VoucherStatus::Unused),
@@ -46,6 +67,7 @@ class VoucherIndexController extends Controller
 
         return Inertia::render('operations/vouchers', [
             'viewer' => $scope['viewer'],
+            'filters' => $filters,
             'summary' => [
                 'total' => $vouchers->count(),
                 'unused' => $vouchers->where('status', VoucherStatus::Unused)->count(),
@@ -60,6 +82,7 @@ class VoucherIndexController extends Controller
                 'branch' => $profile->branch?->name,
                 'package' => $profile->accessPackage?->name,
                 'price' => (float) $profile->price,
+                'currency' => $profile->accessPackage?->currency ?? $profile->tenant?->currency,
                 'duration_minutes' => $profile->duration_minutes,
                 'data_limit_mb' => $profile->data_limit_mb,
                 'expires_in_days' => $profile->expires_in_days,
