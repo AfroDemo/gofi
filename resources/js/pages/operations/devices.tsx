@@ -2,11 +2,12 @@ import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime } from '@/lib/formatters';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { CircleOff, MapPinned, RadioTower, Router, Wrench } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -132,6 +133,9 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                     <div className="text-left xl:text-right">
                                         <p className="text-sm font-medium">Last seen</p>
                                         <p className="text-muted-foreground text-sm">{formatDateTime(device.last_seen_at)}</p>
+                                        <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
+                                            <Link href={route('devices.show', device.id)}>Open detail</Link>
+                                        </Button>
                                     </div>
                                 </div>
 

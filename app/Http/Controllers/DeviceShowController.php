@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\DeviceStatus;
+use App\Enums\HotspotSessionStatus;
+use App\Enums\TransactionStatus;
+use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
+use App\Models\AccessPackage;
+use App\Models\HotspotDevice;
+use App\Models\HotspotSession;
+use App\Models\Transaction;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class DeviceShowController extends Controller
+{
+    use ResolvesWorkspaceScope;
+
+    public function __invoke(Request $request, HotspotDevice $device): Response
+    {
+        $scope = $this->resolveWorkspaceScope($request);
+
+        $device = HotspotDevice::query()
+            ->whereIn('tenant_id', $scope['tenant_ids'])
+            ->with([
+                'tenant:id,name',
+                'branch:id,tenant_id,name,code,location,address,manager_user_id',
+                'branch.manager:id,name,email',
+            ])
+            ->findOrFail($device->id);
+
+        $branchId = $device->branch_id;
+        $lastSeenAgeMinutes = $device->last_seen_at
+            ? (int) ceil($device->last_seen_at->diffInSeconds(now()) / 60)
+            : null;
+
+        $recentSessions = HotspotSession::query()
+            ->where('branch_id', $branchId)
+            ->with(['accessPackage:id,name', 'transaction:id,reference'])
+            ->latest('started_at')
+            ->limit(5)
+            ->get();
+
+        $recentTransactions = Transaction::query()
+            ->where('branch_id', $branchId)
+            ->with(['accessPackage:id,name'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return Inertia::render('operations/device-show', [
+            'viewer' => $scope['viewer'],
+            'device' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'identifier' => $device->identifier,
+                'status' => $device->status->value,
+                'integration_driver' => $device->integration_driver,
+                'ip_address' => $device->ip_address,
+                'last_seen_at' => $device->last_seen_at?->toIso8601String(),
+                'last_seen_age_minutes' => $lastSeenAgeMinutes,
+                'status_note' => match ($device->status) {
+                    DeviceStatus::Online => 'This device is reporting normally and should be ready for customer traffic.',
+                    DeviceStatus::Offline => 'This device is not reporting in. Check branch power, uplink, and router reachability before blaming checkout.',
+                    DeviceStatus::Provisioning => 'This device is not fully operational yet. Finish provisioning before relying on it for live sessions.',
+                },
+                'metadata' => $device->metadata,
+                'tenant' => $device->tenant?->name,
+                'branch' => [
+                    'name' => $device->branch?->name,
+                    'code' => $device->branch?->code,
+                    'location' => $device->branch?->location,
+                    'address' => $device->branch?->address,
+                    'manager_name' => $device->branch?->manager?->name,
+                    'manager_email' => $device->branch?->manager?->email,
+                ],
+            ],
+            'branch_overview' => [
+                'device_count' => HotspotDevice::query()->where('branch_id', $branchId)->count(),
+                'online_devices' => HotspotDevice::query()->where('branch_id', $branchId)->where('status', DeviceStatus::Online)->count(),
+                'active_sessions' => HotspotSession::query()->where('branch_id', $branchId)->where('status', HotspotSessionStatus::Active)->count(),
+                'pending_transactions' => Transaction::query()->where('branch_id', $branchId)->where('status', TransactionStatus::Pending)->count(),
+                'stale_pending_transactions' => Transaction::query()
+                    ->where('branch_id', $branchId)
+                    ->where('status', TransactionStatus::Pending)
+                    ->where('created_at', '<=', now()->subMinutes(5))
+                    ->count(),
+                'active_packages' => AccessPackage::query()->where('branch_id', $branchId)->where('is_active', true)->count(),
+            ],
+            'recent_sessions' => $recentSessions->map(fn (HotspotSession $session) => [
+                'id' => $session->id,
+                'package' => $session->accessPackage?->name,
+                'status' => $session->status->value,
+                'transaction_reference' => $session->transaction?->reference,
+                'started_at' => $session->started_at?->toIso8601String(),
+                'expires_at' => $session->expires_at?->toIso8601String(),
+                'data_used_mb' => (int) $session->data_used_mb,
+            ])->values(),
+            'recent_transactions' => $recentTransactions->map(fn (Transaction $transaction) => [
+                'id' => $transaction->id,
+                'reference' => $transaction->reference,
+                'status' => $transaction->status->value,
+                'source' => $transaction->source->value,
+                'amount' => (float) $transaction->amount,
+                'currency' => $transaction->currency,
+                'package' => $transaction->accessPackage?->name,
+                'provider_reference' => $transaction->provider_reference,
+                'created_at' => $transaction->created_at?->toIso8601String(),
+            ])->values(),
+        ]);
+    }
+}

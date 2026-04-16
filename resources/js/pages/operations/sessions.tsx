@@ -2,11 +2,12 @@ import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatDateTime, formatMinutes } from '@/lib/formatters';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Activity, Clock3, DatabaseZap, TimerOff, Wifi } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -143,6 +144,9 @@ export default function Sessions({ viewer, filters, summary, sessions }: Session
                                             {formatDataLimit(session.data_used_mb)} used
                                             {session.data_limit_mb ? ` of ${formatDataLimit(session.data_limit_mb)}` : ''}
                                         </p>
+                                        <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
+                                            <Link href={route('sessions.show', session.id)}>Open detail</Link>
+                                        </Button>
                                     </div>
                                 </div>
 
