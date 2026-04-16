@@ -29,6 +29,8 @@ use App\Http\Controllers\TransactionStatusRefreshController;
 use App\Http\Controllers\VoucherBatchController;
 use App\Http\Controllers\VoucherIndexController;
 use App\Http\Controllers\VoucherProfileManagementController;
+use App\Services\NetworkAccessService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -100,5 +102,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+Route::fallback(function () {
+    return redirect('/');
+});
+
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
