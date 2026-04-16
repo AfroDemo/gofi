@@ -39,7 +39,9 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.unavailable_branches', 1)
                 ->where('escalations.summary.open_incidents', 1)
                 ->where('escalations.summary.payment_followups', 0)
+                ->where('myFollowUps.summary.total', 0)
                 ->has('escalations.items', 2)
+                ->has('myFollowUps.items', 0)
             );
     }
 
@@ -64,7 +66,14 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.unavailable_branches', 1)
                 ->where('escalations.summary.open_incidents', 1)
                 ->where('escalations.summary.payment_followups', 0)
+                ->where('myFollowUps.summary.total', 1)
+                ->where('myFollowUps.summary.transactions', 1)
+                ->where('myFollowUps.summary.branches', 0)
+                ->where('myFollowUps.summary.devices', 0)
                 ->has('escalations.items', 2)
+                ->has('myFollowUps.items', 1)
+                ->where('myFollowUps.items.0.type', 'transaction')
+                ->where('myFollowUps.items.0.title', 'TXN-1003')
             );
     }
 
@@ -86,7 +95,9 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.unavailable_branches', 0)
                 ->where('escalations.summary.open_incidents', 0)
                 ->where('escalations.summary.payment_followups', 0)
+                ->where('myFollowUps.summary.total', 0)
                 ->has('escalations.items', 0)
+                ->has('myFollowUps.items', 0)
             );
     }
 
@@ -159,6 +170,30 @@ class DashboardScopeTest extends TestCase
                 ->where('escalations.summary.open_incidents', 1)
                 ->where('escalations.summary.payment_followups', 2)
                 ->has('escalations.items', 4)
+            );
+    }
+
+    public function test_operator_dashboard_rolls_up_items_assigned_to_them(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $operator = User::query()->where('email', 'moses@coastfi.test')->firstOrFail();
+
+        $this->actingAs($operator)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard', false)
+                ->where('viewer.scope', 'tenant')
+                ->where('myFollowUps.summary.total', 2)
+                ->where('myFollowUps.summary.branches', 1)
+                ->where('myFollowUps.summary.devices', 1)
+                ->where('myFollowUps.summary.transactions', 0)
+                ->has('myFollowUps.items', 2)
+                ->where('myFollowUps.items.0.type', 'device')
+                ->where('myFollowUps.items.0.title', 'MWG RTR 01')
+                ->where('myFollowUps.items.1.type', 'branch')
+                ->where('myFollowUps.items.1.title', 'Mwenge Corner')
             );
     }
 }

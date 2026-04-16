@@ -87,11 +87,39 @@ interface Escalations {
     items: EscalationItem[];
 }
 
+interface MyFollowUpSummary {
+    total: number;
+    branches: number;
+    devices: number;
+    transactions: number;
+}
+
+interface MyFollowUpItem {
+    type: 'branch' | 'device' | 'transaction';
+    title: string;
+    description: string;
+    tenant: string | null;
+    branch: string | null;
+    assigned_at: string | null;
+    href: string;
+}
+
+interface MyFollowUps {
+    summary: MyFollowUpSummary;
+    items: MyFollowUpItem[];
+    queue_links: {
+        branches: string;
+        devices: string;
+        transactions: string;
+    };
+}
+
 interface DashboardProps {
     viewer: Viewer;
     summary: Summary;
     deviceStatus: DeviceStatus;
     escalations: Escalations;
+    myFollowUps: MyFollowUps;
     revenueRows: RevenueRow[];
     recentTransactions: DashboardTransaction[];
     activeSessions: ActiveSession[];
@@ -139,6 +167,12 @@ const escalationTypeLabel: Record<EscalationItem['type'], string> = {
     payment_followup: 'Payment follow-up',
 };
 
+const followUpTypeTone: Record<MyFollowUpItem['type'], string> = {
+    branch: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    device: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    transaction: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
+};
+
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: LucideIcon }) {
     return (
         <Card className="border-border/70">
@@ -158,7 +192,7 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
     );
 }
 
-export default function Dashboard({ viewer, summary, deviceStatus, escalations, revenueRows, recentTransactions, activeSessions }: DashboardProps) {
+export default function Dashboard({ viewer, summary, deviceStatus, escalations, myFollowUps, revenueRows, recentTransactions, activeSessions }: DashboardProps) {
     const scopeLabel = viewer.scope === 'platform' ? 'Platform admin view' : 'Tenant operations view';
 
     return (
@@ -297,6 +331,87 @@ export default function Dashboard({ viewer, summary, deviceStatus, escalations, 
                                     <p className="font-medium">No escalations are open right now.</p>
                                     <p className="text-muted-foreground mt-2 text-sm">
                                         Branches, devices, and payment follow-ups are currently clear for this workspace scope.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+                    <Card className="border-border/70">
+                        <CardHeader>
+                            <CardTitle>My follow-ups</CardTitle>
+                            <CardDescription>Work currently assigned to you across branches, devices, and payment investigations.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                            {[
+                                ['Total assigned', myFollowUps.summary.total, 'text-primary'],
+                                ['Branch follow-ups', myFollowUps.summary.branches, 'text-amber-600'],
+                                ['Device follow-ups', myFollowUps.summary.devices, 'text-rose-600'],
+                                ['Transaction follow-ups', myFollowUps.summary.transactions, 'text-indigo-600'],
+                            ].map(([label, count, tone]) => (
+                                <div key={label} className="border-border/60 rounded-xl border px-4 py-3">
+                                    <p className="text-muted-foreground text-sm">{label}</p>
+                                    <p className={`mt-2 text-3xl font-semibold ${tone}`}>{count}</p>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-border/70">
+                        <CardHeader>
+                            <CardTitle>Assigned queue</CardTitle>
+                            <CardDescription>Jump straight into the items that currently belong to you.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {myFollowUps.items.length > 0 ? (
+                                <>
+                                    {myFollowUps.items.map((item) => (
+                                        <div key={`${item.type}-${item.href}-${item.assigned_at ?? 'now'}`} className="border-border/60 rounded-xl border px-4 py-3">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                                <div className="space-y-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="font-medium">{item.title}</p>
+                                                        <Badge variant="outline" className={followUpTypeTone[item.type]}>
+                                                            {item.type}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-muted-foreground text-sm">{item.description}</p>
+                                                    <p className="text-muted-foreground text-sm">
+                                                        {[item.branch, item.tenant, item.assigned_at ? dateTime.format(new Date(item.assigned_at)) : null]
+                                                            .filter(Boolean)
+                                                            .join(' • ')}
+                                                    </p>
+                                                </div>
+                                                <Link
+                                                    href={item.href}
+                                                    className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                                                >
+                                                    Open follow-up
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <Link href={myFollowUps.queue_links.branches} className="text-primary text-sm font-medium hover:underline">
+                                            Branch queue
+                                        </Link>
+                                        <Link href={myFollowUps.queue_links.devices} className="text-primary text-sm font-medium hover:underline">
+                                            Device queue
+                                        </Link>
+                                        <Link href={myFollowUps.queue_links.transactions} className="text-primary text-sm font-medium hover:underline">
+                                            Transaction queue
+                                        </Link>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="border-border/60 rounded-xl border border-dashed px-4 py-8 text-center">
+                                    <p className="font-medium">Nothing is assigned to you right now.</p>
+                                    <p className="text-muted-foreground mt-2 text-sm">
+                                        When you take ownership of a branch, device, or transaction follow-up, it will appear here.
                                     </p>
                                 </div>
                             )}

@@ -7,6 +7,7 @@ use App\Enums\DeviceIncidentSeverity;
 use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
 use App\Enums\HotspotSessionStatus;
+use App\Enums\OperatorFollowUpStatus;
 use App\Enums\PayoutStatus;
 use App\Enums\TenantStatus;
 use App\Enums\TransactionStatus;
@@ -18,6 +19,7 @@ use App\Models\HotspotSession;
 use App\Models\Payout;
 use App\Models\Tenant;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,6 +42,7 @@ class DashboardController extends Controller
         $branches = Branch::query()->whereIn('tenant_id', $tenantIds);
         $payouts = Payout::query()->whereIn('tenant_id', $tenantIds);
         $escalations = $this->buildEscalations($tenantIds);
+        $myFollowUps = $this->buildMyFollowUps($tenantIds, $scope['user']);
 
         return Inertia::render('dashboard', [
             'viewer' => $scope['viewer'],
@@ -68,6 +71,7 @@ class DashboardController extends Controller
                 'provisioning' => (clone $devices)->where('status', DeviceStatus::Provisioning)->count(),
             ],
             'escalations' => $escalations,
+            'myFollowUps' => $myFollowUps,
             'revenueRows' => $this->buildRevenueRows($isPlatformAdmin, $tenantScope),
             'recentTransactions' => (clone $transactions)
                 ->with(['tenant:id,name', 'branch:id,name'])
@@ -100,6 +104,96 @@ class DashboardController extends Controller
                     'data_used_mb' => (int) $session->data_used_mb,
                 ]),
         ]);
+    }
+
+    protected function buildMyFollowUps(array $tenantIds, User $viewer): array
+    {
+        $branches = Branch::query()
+            ->whereIn('tenant_id', $tenantIds)
+            ->whereHas('operatorFollowUp', function (Builder $query) use ($viewer) {
+                $query
+                    ->where('assigned_user_id', $viewer->id)
+                    ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
+            })
+            ->with(['tenant:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (Branch $branch) => [
+                'type' => 'branch',
+                'title' => $branch->name,
+                'description' => 'Branch follow-up is assigned to you.',
+                'tenant' => $branch->tenant?->name,
+                'branch' => $branch->name,
+                'assigned_at' => $branch->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'href' => route('branches.show', $branch),
+            ]);
+
+        $devices = HotspotDevice::query()
+            ->whereIn('tenant_id', $tenantIds)
+            ->whereHas('operatorFollowUp', function (Builder $query) use ($viewer) {
+                $query
+                    ->where('assigned_user_id', $viewer->id)
+                    ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
+            })
+            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (HotspotDevice $device) => [
+                'type' => 'device',
+                'title' => $device->name,
+                'description' => sprintf(
+                    '%s needs hardware follow-up.',
+                    $device->identifier
+                ),
+                'tenant' => $device->tenant?->name,
+                'branch' => $device->branch?->name,
+                'assigned_at' => $device->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'href' => route('devices.show', $device),
+            ]);
+
+        $transactions = Transaction::query()
+            ->whereIn('tenant_id', $tenantIds)
+            ->whereHas('operatorFollowUp', function (Builder $query) use ($viewer) {
+                $query
+                    ->where('assigned_user_id', $viewer->id)
+                    ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value);
+            })
+            ->with(['tenant:id,name', 'branch:id,name', 'operatorFollowUp:id,followable_id,followable_type,assigned_at'])
+            ->latest()
+            ->get()
+            ->map(fn (Transaction $transaction) => [
+                'type' => 'transaction',
+                'title' => $transaction->reference,
+                'description' => 'Payment follow-up is assigned to you.',
+                'tenant' => $transaction->tenant?->name,
+                'branch' => $transaction->branch?->name,
+                'assigned_at' => $transaction->operatorFollowUp?->assigned_at?->toIso8601String(),
+                'href' => route('transactions.show', $transaction),
+            ]);
+
+        $items = $branches
+            ->concat($devices)
+            ->concat($transactions)
+            ->sortByDesc('assigned_at')
+            ->values();
+
+        return [
+            'summary' => [
+                'total' => $items->count(),
+                'branches' => $branches->count(),
+                'devices' => $devices->count(),
+                'transactions' => $transactions->count(),
+            ],
+            'items' => $items
+                ->take(6)
+                ->values()
+                ->all(),
+            'queue_links' => [
+                'branches' => route('branches.index', ['follow_up' => 'mine']),
+                'devices' => route('devices.index', ['follow_up' => 'mine']),
+                'transactions' => route('transactions.index', ['follow_up' => 'mine']),
+            ],
+        ];
     }
 
     protected function buildRevenueRows(bool $isPlatformAdmin, ?Tenant $tenantScope): array
