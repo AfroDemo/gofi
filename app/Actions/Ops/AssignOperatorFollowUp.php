@@ -2,6 +2,7 @@
 
 namespace App\Actions\Ops;
 
+use App\Enums\OperatorFollowUpStatus;
 use App\Models\Branch;
 use App\Models\HotspotDevice;
 use App\Models\Transaction;
@@ -18,6 +19,9 @@ class AssignOperatorFollowUp
             'assigned_user_id' => $assignedUser->id,
             'assigned_by_user_id' => $actor->id,
             'assigned_at' => now(),
+            'status' => OperatorFollowUpStatus::NeedsFollowUp,
+            'resolved_by_user_id' => null,
+            'resolved_at' => null,
         ]);
 
         $message = $assignedUser->is($actor)

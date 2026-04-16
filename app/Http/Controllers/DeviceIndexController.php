@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
+use App\Enums\OperatorFollowUpStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\HotspotDevice;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +27,11 @@ class DeviceIndexController extends Controller
             'attention' => in_array($request->string('attention')->toString(), ['all', 'review', 'open_incidents', 'offline'], true)
                 ? $request->string('attention')->toString()
                 : 'all',
+            'follow_up' => in_array($request->string('follow_up')->toString(), ['all', 'open', 'mine', 'resolved', 'none'], true)
+                ? $request->string('follow_up')->toString()
+                : 'all',
         ];
+        $viewerId = $scope['user']->id;
 
         $devices = HotspotDevice::query()
             ->whereIn('tenant_id', $scope['tenant_ids'])
@@ -57,7 +62,28 @@ class DeviceIndexController extends Controller
                         ->orWhereHas('incidents', fn (Builder $incidents) => $incidents->where('status', DeviceIncidentStatus::Open));
                 });
             })
-            ->with(['tenant:id,name,currency', 'branch:id,name,location,status'])
+            ->when($filters['follow_up'] === 'open', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::NeedsFollowUp->value));
+            })
+            ->when($filters['follow_up'] === 'mine', function (Builder $query) use ($viewerId) {
+                $query->whereHas('operatorFollowUp', function (Builder $followUp) use ($viewerId) {
+                    $followUp
+                        ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value)
+                        ->where('assigned_user_id', $viewerId);
+                });
+            })
+            ->when($filters['follow_up'] === 'resolved', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::Resolved->value));
+            })
+            ->when($filters['follow_up'] === 'none', function (Builder $query) {
+                $query->whereDoesntHave('operatorFollowUp');
+            })
+            ->with([
+                'tenant:id,name,currency',
+                'branch:id,name,location,status',
+                'operatorFollowUp:id,assigned_user_id,followable_type,followable_id,status',
+                'operatorFollowUp.assignedUser:id,name,email',
+            ])
             ->withCount([
                 'incidents as open_incidents_count' => fn (Builder $query) => $query->where('status', DeviceIncidentStatus::Open),
             ])
@@ -74,6 +100,9 @@ class DeviceIndexController extends Controller
                 'provisioning' => $devices->where('status', DeviceStatus::Provisioning)->count(),
                 'branches_covered' => $devices->pluck('branch_id')->filter()->unique()->count(),
                 'open_incidents' => (int) $devices->sum('open_incidents_count'),
+                'open_follow_ups' => $devices->filter(
+                    fn (HotspotDevice $device) => $device->operatorFollowUp?->status === OperatorFollowUpStatus::NeedsFollowUp
+                )->count(),
             ],
             'devices' => $devices->map(fn (HotspotDevice $device) => [
                 'id' => $device->id,
@@ -88,6 +117,9 @@ class DeviceIndexController extends Controller
                 'ip_address' => $device->ip_address,
                 'last_seen_at' => $device->last_seen_at?->toIso8601String(),
                 'open_incidents_count' => (int) $device->open_incidents_count,
+                'follow_up_status' => $device->operatorFollowUp?->status?->value,
+                'follow_up_assignee' => $device->operatorFollowUp?->assignedUser?->name,
+                'follow_up_owned_by_viewer' => $device->operatorFollowUp?->assigned_user_id === $viewerId,
                 'attention_reason' => $this->attentionReason($device),
                 'metadata' => $device->metadata,
             ])->values(),

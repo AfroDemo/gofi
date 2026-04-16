@@ -63,6 +63,38 @@ class OperatorFollowUpTest extends TestCase
         ]);
     }
 
+    public function test_tenant_user_can_reassign_branch_follow_up_to_another_tenant_operator(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+        $operator = User::query()->where('email', 'moses@coastfi.test')->firstOrFail();
+        $branch = Branch::query()->where('code', 'MWG')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('branches.follow-up.store', $branch), [
+                'assigned_user_id' => $operator->id,
+            ])
+            ->assertRedirect(route('branches.show', $branch));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Branch::class)
+            ->where('followable_id', $branch->id)
+            ->firstOrFail();
+
+        $this->assertSame($operator->id, $followUp->assigned_user_id);
+        $this->assertSame($owner->id, $followUp->assigned_by_user_id);
+
+        $this->assertDatabaseHas('operator_notes', [
+            'tenant_id' => $branch->tenant_id,
+            'branch_id' => $branch->id,
+            'user_id' => $owner->id,
+            'noteable_type' => Branch::class,
+            'noteable_id' => $branch->id,
+            'note' => 'Amina Juma assigned this follow-up to Moses Ally.',
+        ]);
+    }
+
     public function test_tenant_user_can_release_device_follow_up_ownership(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -89,6 +121,70 @@ class OperatorFollowUpTest extends TestCase
         ]);
     }
 
+    public function test_tenant_user_can_mark_transaction_follow_up_resolved(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+        $transaction = Transaction::query()->where('reference', 'TXN-1003')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('transactions.follow-up.resolve', $transaction))
+            ->assertRedirect(route('transactions.show', $transaction));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Transaction::class)
+            ->where('followable_id', $transaction->id)
+            ->firstOrFail();
+
+        $this->assertSame('resolved', $followUp->status->value);
+        $this->assertSame($owner->id, $followUp->resolved_by_user_id);
+        $this->assertNotNull($followUp->resolved_at);
+
+        $this->assertDatabaseHas('operator_notes', [
+            'tenant_id' => $transaction->tenant_id,
+            'branch_id' => $transaction->branch_id,
+            'user_id' => $owner->id,
+            'noteable_type' => Transaction::class,
+            'noteable_id' => $transaction->id,
+            'note' => 'Amina Juma marked this follow-up as resolved.',
+        ]);
+    }
+
+    public function test_tenant_user_can_reopen_resolved_branch_follow_up(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+        $branch = Branch::query()->where('code', 'MWG')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('branches.follow-up.resolve', $branch))
+            ->assertRedirect(route('branches.show', $branch));
+
+        $this->actingAs($owner)
+            ->post(route('branches.follow-up.reopen', $branch))
+            ->assertRedirect(route('branches.show', $branch));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Branch::class)
+            ->where('followable_id', $branch->id)
+            ->firstOrFail();
+
+        $this->assertSame('needs_follow_up', $followUp->status->value);
+        $this->assertNull($followUp->resolved_by_user_id);
+        $this->assertNull($followUp->resolved_at);
+
+        $this->assertDatabaseHas('operator_notes', [
+            'tenant_id' => $branch->tenant_id,
+            'branch_id' => $branch->id,
+            'user_id' => $owner->id,
+            'noteable_type' => Branch::class,
+            'noteable_id' => $branch->id,
+            'note' => 'Amina Juma reopened this follow-up.',
+        ]);
+    }
+
     public function test_tenant_user_cannot_take_other_tenant_follow_up(): void
     {
         $this->seed(DemoPlatformSeeder::class);
@@ -108,5 +204,27 @@ class OperatorFollowUpTest extends TestCase
                 ->where('note', 'Amina Juma took ownership of this follow-up.')
                 ->count()
         );
+    }
+
+    public function test_platform_admin_can_take_follow_up_without_tenant_membership(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $admin = User::query()->where('email', 'admin@gofi.test')->firstOrFail();
+        $transaction = Transaction::query()->where('reference', 'TXN-1003')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('transactions.follow-up.store', $transaction), [
+                'assigned_user_id' => $admin->id,
+            ])
+            ->assertRedirect(route('transactions.show', $transaction));
+
+        $followUp = OperatorFollowUp::query()
+            ->where('followable_type', Transaction::class)
+            ->where('followable_id', $transaction->id)
+            ->firstOrFail();
+
+        $this->assertSame($admin->id, $followUp->assigned_user_id);
+        $this->assertSame($admin->id, $followUp->assigned_by_user_id);
     }
 }

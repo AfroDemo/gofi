@@ -29,6 +29,7 @@ interface Summary {
     provisioning: number;
     branches_covered: number;
     open_incidents: number;
+    open_follow_ups: number;
 }
 
 interface DeviceRow {
@@ -44,6 +45,9 @@ interface DeviceRow {
     ip_address: string | null;
     last_seen_at: string | null;
     open_incidents_count: number;
+    follow_up_status: string | null;
+    follow_up_assignee: string | null;
+    follow_up_owned_by_viewer: boolean;
     attention_reason: string | null;
     metadata: Record<string, unknown> | null;
 }
@@ -54,6 +58,7 @@ interface DevicesPageProps {
         search: string;
         status: string;
         attention: string;
+        follow_up: string;
     };
     summary: Summary;
     devices: DeviceRow[];
@@ -79,7 +84,7 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                 <OpsFilters
                     search={filters.search}
                     searchPlaceholder="Search device name, identifier, branch, tenant, driver, or IP address"
-                    values={{ status: filters.status, attention: filters.attention }}
+                    values={{ status: filters.status, attention: filters.attention, follow_up: filters.follow_up }}
                     fields={[
                         {
                             key: 'status',
@@ -103,6 +108,18 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                 { label: 'Offline only', value: 'offline' },
                             ],
                         },
+                        {
+                            key: 'follow_up',
+                            label: 'Follow-up',
+                            placeholder: 'All follow-up states',
+                            options: [
+                                { label: 'All follow-ups', value: 'all' },
+                                { label: 'Open follow-ups', value: 'open' },
+                                { label: 'Assigned to me', value: 'mine' },
+                                { label: 'Resolved', value: 'resolved' },
+                                { label: 'No follow-up', value: 'none' },
+                            ],
+                        },
                     ]}
                     resultLabel={`${devices.length} device matches in the current workspace.`}
                 />
@@ -112,6 +129,12 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                     <OpsStatCard label="Online" value={summary.online.toString()} hint="Devices currently reporting in." icon={RadioTower} />
                     <OpsStatCard label="Offline" value={summary.offline.toString()} hint="Branch-side equipment that may block customer access." icon={CircleOff} />
                     <OpsStatCard label="Open incidents" value={summary.open_incidents.toString()} hint="Hardware issues that still need operator follow-up." icon={Wrench} />
+                    <OpsStatCard
+                        label="Open follow-ups"
+                        value={summary.open_follow_ups.toString()}
+                        hint="Devices currently assigned or waiting for operator follow-up."
+                        icon={Wrench}
+                    />
                     <OpsStatCard label="Provisioning" value={summary.provisioning.toString()} hint="Devices not fully ready for live operations yet." icon={Router} />
                     <OpsStatCard label="Branches covered" value={summary.branches_covered.toString()} hint="How many branches have visible hardware." icon={MapPinned} />
                 </section>
@@ -145,6 +168,34 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                             Driver: {device.integration_driver}
                                             {device.ip_address ? ` • ${device.ip_address}` : ' • No IP recorded'}
                                         </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {device.follow_up_status && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        device.follow_up_status === 'resolved'
+                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                            : 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                                                    }
+                                                >
+                                                    {device.follow_up_status === 'resolved' ? 'Follow-up resolved' : 'Follow-up open'}
+                                                </Badge>
+                                            )}
+                                            {device.follow_up_assignee && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        device.follow_up_owned_by_viewer
+                                                            ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                                                            : ''
+                                                    }
+                                                >
+                                                    {device.follow_up_owned_by_viewer
+                                                        ? 'Assigned to you'
+                                                        : `Assigned to ${device.follow_up_assignee}`}
+                                                </Badge>
+                                            )}
+                                        </div>
                                         {device.attention_reason && (
                                             <p className="text-sm text-amber-700 dark:text-amber-300">{device.attention_reason}</p>
                                         )}
@@ -181,7 +232,9 @@ export default function Devices({ viewer, filters, summary, devices }: DevicesPa
                                         <p className="mt-2 font-medium">
                                             {device.open_incidents_count > 0
                                                 ? `${device.open_incidents_count} open incident${device.open_incidents_count === 1 ? '' : 's'}`
-                                                : String(device.metadata?.firmware ?? 'No metadata')}
+                                                : device.follow_up_assignee
+                                                  ? `Follow-up: ${device.follow_up_owned_by_viewer ? 'You' : device.follow_up_assignee}`
+                                                  : String(device.metadata?.firmware ?? 'No metadata')}
                                         </p>
                                     </div>
                                 </div>

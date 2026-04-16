@@ -13,6 +13,7 @@ use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,9 +33,10 @@ class BranchShowController extends Controller
                 'manager:id,name,email',
                 'statusEvents:id,tenant_id,branch_id,changed_by_user_id,from_status,to_status,reason,created_at',
                 'statusEvents.actor:id,name,email',
-                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at',
                 'operatorFollowUp.assignedUser:id,name,email',
                 'operatorFollowUp.assignedBy:id,name,email',
+                'operatorFollowUp.resolvedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -60,6 +62,19 @@ class BranchShowController extends Controller
             ->latest('opened_at')
             ->limit(5)
             ->get();
+
+        $assignableUsers = User::query()
+            ->where(function ($query) use ($branch, $request) {
+                $query->whereHas('tenantMemberships', fn ($memberships) => $memberships->where('tenant_id', $branch->tenant_id));
+
+                if ($request->user()?->isPlatformAdmin()) {
+                    $query->orWhere('id', $request->user()->id);
+                }
+            })
+            ->orderBy('name')
+            ->get()
+            ->unique('id')
+            ->values();
 
         return Inertia::render('operations/branch-show', [
             'viewer' => $scope['viewer'],
@@ -143,7 +158,10 @@ class BranchShowController extends Controller
             ])->values(),
             'follow_up' => $branch->operatorFollowUp ? [
                 'assigned_at' => $branch->operatorFollowUp->assigned_at?->toIso8601String(),
+                'status' => $branch->operatorFollowUp->status->value,
+                'resolved_at' => $branch->operatorFollowUp->resolved_at?->toIso8601String(),
                 'owned_by_viewer' => $branch->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                'assigned_user_id' => $branch->operatorFollowUp->assigned_user_id,
                 'assigned_user' => $branch->operatorFollowUp->assignedUser ? [
                     'name' => $branch->operatorFollowUp->assignedUser->name,
                     'email' => $branch->operatorFollowUp->assignedUser->email,
@@ -152,7 +170,16 @@ class BranchShowController extends Controller
                     'name' => $branch->operatorFollowUp->assignedBy->name,
                     'email' => $branch->operatorFollowUp->assignedBy->email,
                 ] : null,
+                'resolved_by' => $branch->operatorFollowUp->resolvedBy ? [
+                    'name' => $branch->operatorFollowUp->resolvedBy->name,
+                    'email' => $branch->operatorFollowUp->resolvedBy->email,
+                ] : null,
             ] : null,
+            'assignable_users' => $assignableUsers->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])->all(),
             'notes' => $branch->operatorNotes
                 ->sortByDesc('created_at')
                 ->values()

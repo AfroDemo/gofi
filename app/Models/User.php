@@ -124,6 +124,11 @@ class User extends Authenticatable
         return $this->hasMany(OperatorFollowUp::class, 'assigned_by_user_id');
     }
 
+    public function resolvedOperatorFollowUps(): HasMany
+    {
+        return $this->hasMany(OperatorFollowUp::class, 'resolved_by_user_id');
+    }
+
     public function isPlatformAdmin(): bool
     {
         return ($this->platform_role ?? PlatformRole::TenantUser) === PlatformRole::SuperAdmin;

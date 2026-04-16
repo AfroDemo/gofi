@@ -15,6 +15,7 @@ import { Activity, ArrowLeft, CircleAlert, Clock3, RadioTower, Router } from 'lu
 import { FormEvent } from 'react';
 
 interface Viewer {
+    id: number;
     scope: 'platform' | 'tenant';
     name: string;
     role: string;
@@ -110,10 +111,15 @@ interface DeviceShowProps {
     incidents: IncidentRow[];
     follow_up: {
         assigned_at: string | null;
+        status: string;
+        resolved_at: string | null;
+        assigned_user_id?: number | null;
         owned_by_viewer: boolean;
         assigned_user: { name: string; email: string } | null;
         assigned_by: { name: string; email: string } | null;
+        resolved_by: { name: string; email: string } | null;
     } | null;
+    assignable_users: Array<{ id: number; name: string; email: string }>;
     notes: FollowUpNoteRow[];
 }
 
@@ -175,6 +181,7 @@ export default function DeviceShow({
     incident_options,
     incidents,
     follow_up,
+    assignable_users,
     notes,
 }: DeviceShowProps) {
     const { flash } = usePage<SharedData>().props;
@@ -362,8 +369,12 @@ export default function DeviceShow({
                     description="Keep a running investigation trail here so hardware follow-up survives shift changes and handoffs."
                     notes={notes}
                     followUp={follow_up}
-                    takeOwnershipHref={route('devices.follow-up.store', device.id)}
+                    assignHref={route('devices.follow-up.store', device.id)}
+                    resolveHref={route('devices.follow-up.resolve', device.id)}
+                    reopenHref={route('devices.follow-up.reopen', device.id)}
                     releaseOwnershipHref={route('devices.follow-up.destroy', device.id)}
+                    assignableUsers={assignable_users}
+                    preferredAssigneeId={viewer.id}
                     note={noteForm.data.note}
                     onNoteChange={(value) => noteForm.setData('note', value)}
                     onSubmit={submitNote}

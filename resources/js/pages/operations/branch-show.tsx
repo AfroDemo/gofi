@@ -15,6 +15,7 @@ import { Activity, ArrowLeft, CircleAlert, Clock3, MapPinned, Router } from 'luc
 import { FormEvent } from 'react';
 
 interface Viewer {
+    id: number;
     scope: 'platform' | 'tenant';
     name: string;
     role: string;
@@ -107,10 +108,15 @@ interface BranchShowProps {
     recent_incidents: RecentIncident[];
     follow_up: {
         assigned_at: string | null;
+        status: string;
+        resolved_at: string | null;
+        assigned_user_id?: number | null;
         owned_by_viewer: boolean;
         assigned_user: { name: string; email: string } | null;
         assigned_by: { name: string; email: string } | null;
+        resolved_by: { name: string; email: string } | null;
     } | null;
+    assignable_users: Array<{ id: number; name: string; email: string }>;
     notes: FollowUpNoteRow[];
 }
 
@@ -142,6 +148,7 @@ export default function BranchShow({
     recent_sessions,
     recent_incidents,
     follow_up,
+    assignable_users,
     notes,
 }: BranchShowProps) {
     const { flash } = usePage<SharedData>().props;
@@ -318,8 +325,12 @@ export default function BranchShow({
                     description="Capture who picked this up, what was checked, and what still needs attention so branch work does not rely on memory."
                     notes={notes}
                     followUp={follow_up}
-                    takeOwnershipHref={route('branches.follow-up.store', branch.id)}
+                    assignHref={route('branches.follow-up.store', branch.id)}
+                    resolveHref={route('branches.follow-up.resolve', branch.id)}
+                    reopenHref={route('branches.follow-up.reopen', branch.id)}
                     releaseOwnershipHref={route('branches.follow-up.destroy', branch.id)}
+                    assignableUsers={assignable_users}
+                    preferredAssigneeId={viewer.id}
                     note={noteForm.data.note}
                     onNoteChange={(value) => noteForm.setData('note', value)}
                     onSubmit={submitNote}

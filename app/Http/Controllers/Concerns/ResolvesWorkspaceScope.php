@@ -16,7 +16,7 @@ trait ResolvesWorkspaceScope
      *     tenant: ?Tenant,
      *     tenant_ids: array<int, int>,
      *     currency: ?string,
-     *     viewer: array{scope: string, name: string, role: string, currency: ?string}
+     *     viewer: array{id: int, scope: string, name: string, role: string, currency: ?string}
      * }
      */
     protected function resolveWorkspaceScope(Request $request): array
@@ -48,6 +48,7 @@ trait ResolvesWorkspaceScope
             'tenant_ids' => $tenantIds,
             'currency' => $currency,
             'viewer' => [
+                'id' => $user->id,
                 'scope' => $isPlatformAdmin ? 'platform' : 'tenant',
                 'name' => $tenantScope?->name ?? ($isPlatformAdmin ? 'Platform overview' : 'No tenant assigned'),
                 'role' => ($user->platform_role ?? PlatformRole::TenantUser)->value,

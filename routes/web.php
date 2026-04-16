@@ -57,6 +57,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('branches/{branch}/status', BranchStatusUpdateController::class)->name('branches.update-status');
     Route::post('branches/{branch}/notes', BranchNoteStoreController::class)->name('branches.notes.store');
     Route::post('branches/{branch}/follow-up', [BranchFollowUpController::class, 'store'])->name('branches.follow-up.store');
+    Route::post('branches/{branch}/follow-up/resolve', [BranchFollowUpController::class, 'resolve'])->name('branches.follow-up.resolve');
+    Route::post('branches/{branch}/follow-up/reopen', [BranchFollowUpController::class, 'reopen'])->name('branches.follow-up.reopen');
     Route::delete('branches/{branch}/follow-up', [BranchFollowUpController::class, 'destroy'])->name('branches.follow-up.destroy');
     Route::get('branches/{branch}', BranchShowController::class)->name('branches.show');
     Route::get('branches/{branch}/edit', [BranchManagementController::class, 'edit'])->name('branches.edit');
@@ -78,6 +80,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('devices/{device}/incidents/{incident}/resolve', DeviceIncidentResolveController::class)->name('devices.incidents.resolve');
     Route::post('devices/{device}/notes', DeviceNoteStoreController::class)->name('devices.notes.store');
     Route::post('devices/{device}/follow-up', [DeviceFollowUpController::class, 'store'])->name('devices.follow-up.store');
+    Route::post('devices/{device}/follow-up/resolve', [DeviceFollowUpController::class, 'resolve'])->name('devices.follow-up.resolve');
+    Route::post('devices/{device}/follow-up/reopen', [DeviceFollowUpController::class, 'reopen'])->name('devices.follow-up.reopen');
     Route::delete('devices/{device}/follow-up', [DeviceFollowUpController::class, 'destroy'])->name('devices.follow-up.destroy');
     Route::get('devices/{device}', DeviceShowController::class)->name('devices.show');
     Route::get('sessions', SessionIndexController::class)->name('sessions.index');
@@ -86,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
     Route::post('transactions/{transaction}/notes', TransactionNoteStoreController::class)->name('transactions.notes.store');
     Route::post('transactions/{transaction}/follow-up', [TransactionFollowUpController::class, 'store'])->name('transactions.follow-up.store');
+    Route::post('transactions/{transaction}/follow-up/resolve', [TransactionFollowUpController::class, 'resolve'])->name('transactions.follow-up.resolve');
+    Route::post('transactions/{transaction}/follow-up/reopen', [TransactionFollowUpController::class, 'reopen'])->name('transactions.follow-up.reopen');
     Route::delete('transactions/{transaction}/follow-up', [TransactionFollowUpController::class, 'destroy'])->name('transactions.follow-up.destroy');
     Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');

@@ -28,6 +28,7 @@ interface Summary {
     needs_review_count: number;
     stale_pending_count: number;
     failed_count: number;
+    open_follow_ups: number;
     platform_share: number;
     tenant_share: number;
 }
@@ -55,6 +56,9 @@ interface TransactionRow {
     tenant_amount: number;
     attention_level: string | null;
     attention_reason: string | null;
+    follow_up_status: string | null;
+    follow_up_assignee: string | null;
+    follow_up_owned_by_viewer: boolean;
     pending_age_minutes: number | null;
     confirmed_at: string | null;
     created_at: string | null;
@@ -67,6 +71,7 @@ interface TransactionsPageProps {
         status: string;
         source: string;
         attention: string;
+        follow_up: string;
     };
     summary: Summary;
     sourceMix: SourceMixRow[];
@@ -100,7 +105,7 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                 <OpsFilters
                     search={filters.search}
                     searchPlaceholder="Search reference, phone, package, branch, tenant, or operator"
-                    values={{ status: filters.status, source: filters.source, attention: filters.attention }}
+                    values={{ status: filters.status, source: filters.source, attention: filters.attention, follow_up: filters.follow_up }}
                     fields={[
                         {
                             key: 'status',
@@ -135,6 +140,18 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                 { label: 'Stale pending', value: 'stale_pending' },
                             ],
                         },
+                        {
+                            key: 'follow_up',
+                            label: 'Follow-up',
+                            placeholder: 'All follow-up states',
+                            options: [
+                                { label: 'All follow-ups', value: 'all' },
+                                { label: 'Open follow-ups', value: 'open' },
+                                { label: 'Assigned to me', value: 'mine' },
+                                { label: 'Resolved', value: 'resolved' },
+                                { label: 'No follow-up', value: 'none' },
+                            ],
+                        },
                     ]}
                     resultLabel={`${transactions.length} transaction matches in the current workspace.`}
                 />
@@ -163,6 +180,12 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                         value={summary.failed_count.toString()}
                         hint="Attempts that did not convert to access."
                         icon={CircleOff}
+                    />
+                    <OpsStatCard
+                        label="Open follow-ups"
+                        value={summary.open_follow_ups.toString()}
+                        hint="Transaction investigations still marked as unresolved."
+                        icon={ShieldAlert}
                     />
                     <OpsStatCard
                         label="Platform share"
@@ -207,6 +230,18 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                                         {transaction.attention_level.replaceAll('_', ' ')}
                                                     </Badge>
                                                 )}
+                                                {transaction.follow_up_status && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={
+                                                            transaction.follow_up_status === 'resolved'
+                                                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                                : 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                                                        }
+                                                    >
+                                                        {transaction.follow_up_status === 'resolved' ? 'Follow-up resolved' : 'Follow-up open'}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <p className="text-muted-foreground text-sm">
                                                 {[transaction.package, transaction.branch, transaction.tenant].filter(Boolean).join(' • ') ||
@@ -216,6 +251,13 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                                 Initiated by {transaction.initiated_by ?? 'Unknown operator'}
                                                 {transaction.phone_number ? ` • ${transaction.phone_number}` : ''}
                                             </p>
+                                            {transaction.follow_up_assignee && (
+                                                <p className="text-muted-foreground text-sm">
+                                                    {transaction.follow_up_owned_by_viewer
+                                                        ? 'Follow-up assigned to you'
+                                                        : `Follow-up assigned to ${transaction.follow_up_assignee}`}
+                                                </p>
+                                            )}
                                             {transaction.attention_reason && (
                                                 <p className="text-sm text-orange-700 dark:text-orange-300">
                                                     {transaction.attention_reason}
@@ -283,7 +325,8 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                             <div className="border-border/60 rounded-xl border px-4 py-4">
                                 <p className="font-medium">Attention snapshot</p>
                                 <p className="text-muted-foreground mt-1 text-sm">
-                                    {summary.needs_review_count} transactions need review, including {summary.stale_pending_count} stale pending payments.
+                                    {summary.needs_review_count} transactions need review, including {summary.stale_pending_count} stale pending payments
+                                    and {summary.open_follow_ups} open follow-ups.
                                 </p>
                             </div>
                         </CardContent>

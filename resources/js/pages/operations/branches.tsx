@@ -29,6 +29,7 @@ interface Summary {
     unavailable: number;
     online_devices: number;
     open_incidents: number;
+    open_follow_ups: number;
     active_sessions: number;
     successful_revenue: number;
 }
@@ -37,6 +38,7 @@ interface Filters {
     search: string;
     status: string;
     attention: string;
+    follow_up: string;
 }
 
 interface BranchRow {
@@ -56,6 +58,9 @@ interface BranchRow {
     stale_pending_transactions_count: number;
     successful_revenue: number;
     currency: string | null;
+    follow_up_status: string | null;
+    follow_up_assignee: string | null;
+    follow_up_owned_by_viewer: boolean;
     attention_reason: string | null;
 }
 
@@ -96,7 +101,7 @@ export default function Branches({ viewer, filters, summary, branches }: Branche
                 <OpsFilters
                     search={filters.search}
                     searchPlaceholder="Search branch name, code, location, manager, tenant, or address"
-                    values={{ status: filters.status, attention: filters.attention }}
+                    values={{ status: filters.status, attention: filters.attention, follow_up: filters.follow_up }}
                     fields={[
                         {
                             key: 'status',
@@ -118,6 +123,18 @@ export default function Branches({ viewer, filters, summary, branches }: Branche
                                 { label: 'Needs review', value: 'review' },
                                 { label: 'Unavailable only', value: 'unavailable' },
                                 { label: 'Open incidents', value: 'open_incidents' },
+                            ],
+                        },
+                        {
+                            key: 'follow_up',
+                            label: 'Follow-up',
+                            placeholder: 'All follow-up states',
+                            options: [
+                                { label: 'All follow-ups', value: 'all' },
+                                { label: 'Open follow-ups', value: 'open' },
+                                { label: 'Assigned to me', value: 'mine' },
+                                { label: 'Resolved', value: 'resolved' },
+                                { label: 'No follow-up', value: 'none' },
                             ],
                         },
                     ]}
@@ -157,6 +174,12 @@ export default function Branches({ viewer, filters, summary, branches }: Branche
                         value={summary.open_incidents.toString()}
                         hint="Unresolved device incidents across visible branches."
                         icon={Wrench}
+                    />
+                    <OpsStatCard
+                        label="Open follow-ups"
+                        value={summary.open_follow_ups.toString()}
+                        hint="Branch investigations still marked as unresolved."
+                        icon={ShieldAlert}
                     />
                     <OpsStatCard
                         label="Online devices"
@@ -222,6 +245,32 @@ export default function Branches({ viewer, filters, summary, branches }: Branche
                                             {branch.open_incidents_count > 0 && (
                                                 <Badge variant="outline" className="bg-rose-500/10 text-rose-700 dark:text-rose-300">
                                                     {branch.open_incidents_count} open incidents
+                                                </Badge>
+                                            )}
+                                            {branch.follow_up_status && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        branch.follow_up_status === 'resolved'
+                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                            : 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
+                                                    }
+                                                >
+                                                    {branch.follow_up_status === 'resolved' ? 'Follow-up resolved' : 'Follow-up open'}
+                                                </Badge>
+                                            )}
+                                            {branch.follow_up_assignee && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        branch.follow_up_owned_by_viewer
+                                                            ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                                                            : ''
+                                                    }
+                                                >
+                                                    {branch.follow_up_owned_by_viewer
+                                                        ? 'Assigned to you'
+                                                        : `Assigned to ${branch.follow_up_assignee}`}
                                                 </Badge>
                                             )}
                                             {branch.stale_pending_transactions_count > 0 && (

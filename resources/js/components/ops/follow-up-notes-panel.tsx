@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { formatDateTime } from '@/lib/formatters';
 import { router } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 interface NoteAuthor {
     name: string;
@@ -20,9 +20,19 @@ export interface FollowUpNoteRow {
 
 interface FollowUpOwner {
     assigned_at: string | null;
+    status: string;
+    resolved_at: string | null;
+    assigned_user_id?: number | null;
     owned_by_viewer: boolean;
     assigned_user: NoteAuthor | null;
     assigned_by: NoteAuthor | null;
+    resolved_by: NoteAuthor | null;
+}
+
+interface AssignableUser {
+    id: number;
+    name: string;
+    email: string;
 }
 
 interface FollowUpNotesPanelProps {
@@ -30,8 +40,12 @@ interface FollowUpNotesPanelProps {
     description: string;
     notes: FollowUpNoteRow[];
     followUp?: FollowUpOwner | null;
-    takeOwnershipHref: string;
+    assignHref: string;
+    resolveHref: string;
+    reopenHref: string;
     releaseOwnershipHref: string;
+    assignableUsers: AssignableUser[];
+    preferredAssigneeId?: number | null;
     note: string;
     onNoteChange: (value: string) => void;
     onSubmit: (event: FormEvent) => void;
@@ -45,8 +59,12 @@ export function FollowUpNotesPanel({
     description,
     notes,
     followUp = null,
-    takeOwnershipHref,
+    assignHref,
+    resolveHref,
+    reopenHref,
     releaseOwnershipHref,
+    assignableUsers,
+    preferredAssigneeId = null,
     note,
     onNoteChange,
     onSubmit,
@@ -54,6 +72,28 @@ export function FollowUpNotesPanel({
     processing = false,
     emptyMessage,
 }: FollowUpNotesPanelProps) {
+    const [assignedUserId, setAssignedUserId] = useState<string>(
+        String(followUp?.assigned_user_id ?? preferredAssigneeId ?? assignableUsers[0]?.id ?? ''),
+    );
+
+    useEffect(() => {
+        setAssignedUserId(String(followUp?.assigned_user_id ?? preferredAssigneeId ?? assignableUsers[0]?.id ?? ''));
+    }, [followUp?.assigned_user_id, preferredAssigneeId, assignableUsers]);
+
+    const assignSelectedUser = () => {
+        if (! assignedUserId) {
+            return;
+        }
+
+        router.post(
+            assignHref,
+            { assigned_user_id: assignedUserId },
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+
     return (
         <Card className="border-border/70">
             <CardHeader>
@@ -66,6 +106,9 @@ export function FollowUpNotesPanel({
                     {followUp ? (
                         <>
                             <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                Status: {followUp.status.replaceAll('_', ' ')}
+                            </p>
+                            <p className="text-muted-foreground mt-2 text-sm leading-6">
                                 {followUp.assigned_user?.name || 'Unknown operator'}
                                 {followUp.assigned_user?.email ? ` • ${followUp.assigned_user.email}` : ''}
                             </p>
@@ -73,19 +116,45 @@ export function FollowUpNotesPanel({
                                 Owned since {formatDateTime(followUp.assigned_at)}
                                 {followUp.assigned_by?.name ? ` • assigned by ${followUp.assigned_by.name}` : ''}
                             </p>
-                            <div className="mt-4">
-                                {followUp.owned_by_viewer ? (
+                            {followUp.status === 'resolved' && (
+                                <p className="text-muted-foreground mt-2 text-sm">
+                                    Resolved {formatDateTime(followUp.resolved_at)}
+                                    {followUp.resolved_by?.name ? ` • by ${followUp.resolved_by.name}` : ''}
+                                </p>
+                            )}
+                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                                {assignableUsers.length > 0 && (
+                                    <div className="flex-1 space-y-2">
+                                        <Label htmlFor="assigned_user_id">Assign to</Label>
+                                        <select
+                                            id="assigned_user_id"
+                                            value={assignedUserId}
+                                            onChange={(event) => setAssignedUserId(event.target.value)}
+                                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                        >
+                                            {assignableUsers.map((user) => (
+                                                <option key={user.id} value={user.id}>
+                                                    {user.name} {user.email ? `(${user.email})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <Button type="button" variant="outline" className="rounded-xl" onClick={assignSelectedUser}>
+                                    {followUp.owned_by_viewer ? 'Reassign follow-up' : 'Assign follow-up'}
+                                </Button>
+                                {followUp.status === 'resolved' ? (
                                     <Button
                                         type="button"
                                         variant="outline"
                                         className="rounded-xl"
                                         onClick={() =>
-                                            router.delete(releaseOwnershipHref, {
+                                            router.post(reopenHref, {}, {
                                                 preserveScroll: true,
                                             })
                                         }
                                     >
-                                        Release ownership
+                                        Reopen follow-up
                                     </Button>
                                 ) : (
                                     <Button
@@ -93,14 +162,26 @@ export function FollowUpNotesPanel({
                                         variant="outline"
                                         className="rounded-xl"
                                         onClick={() =>
-                                            router.post(takeOwnershipHref, {}, {
+                                            router.post(resolveHref, {}, {
                                                 preserveScroll: true,
                                             })
                                         }
                                     >
-                                        Take ownership
+                                        Mark resolved
                                     </Button>
                                 )}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="rounded-xl"
+                                    onClick={() =>
+                                        router.delete(releaseOwnershipHref, {
+                                            preserveScroll: true,
+                                        })
+                                    }
+                                >
+                                    Release ownership
+                                </Button>
                             </div>
                         </>
                     ) : (
@@ -108,18 +189,26 @@ export function FollowUpNotesPanel({
                             <p className="text-muted-foreground mt-2 text-sm leading-6">
                                 No operator currently owns this follow-up. Take ownership to signal that you are driving the investigation.
                             </p>
-                            <div className="mt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="rounded-xl"
-                                    onClick={() =>
-                                        router.post(takeOwnershipHref, {}, {
-                                            preserveScroll: true,
-                                        })
-                                    }
-                                >
-                                    Take ownership
+                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                                {assignableUsers.length > 0 && (
+                                    <div className="flex-1 space-y-2">
+                                        <Label htmlFor="assigned_user_id_empty">Assign to</Label>
+                                        <select
+                                            id="assigned_user_id_empty"
+                                            value={assignedUserId}
+                                            onChange={(event) => setAssignedUserId(event.target.value)}
+                                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                        >
+                                            {assignableUsers.map((user) => (
+                                                <option key={user.id} value={user.id}>
+                                                    {user.name} {user.email ? `(${user.email})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                <Button type="button" variant="outline" className="rounded-xl" onClick={assignSelectedUser}>
+                                    Assign follow-up
                                 </Button>
                             </div>
                         </>

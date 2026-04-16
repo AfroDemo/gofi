@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OperatorFollowUpStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,13 +17,18 @@ class OperatorFollowUp extends Model
         'branch_id',
         'assigned_user_id',
         'assigned_by_user_id',
+        'resolved_by_user_id',
         'assigned_at',
+        'status',
+        'resolved_at',
     ];
 
     protected function casts(): array
     {
         return [
             'assigned_at' => 'datetime',
+            'status' => OperatorFollowUpStatus::class,
+            'resolved_at' => 'datetime',
         ];
     }
 
@@ -44,6 +50,11 @@ class OperatorFollowUp extends Model
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
+    public function resolvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by_user_id');
     }
 
     public function followable(): MorphTo

@@ -12,6 +12,7 @@ use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,9 +34,10 @@ class DeviceShowController extends Controller
                 'incidents:id,tenant_id,branch_id,hotspot_device_id,reported_by_user_id,resolved_by_user_id,title,details,severity,status,opened_at,resolved_at,resolution_notes',
                 'incidents.reporter:id,name,email',
                 'incidents.resolver:id,name,email',
-                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at',
                 'operatorFollowUp.assignedUser:id,name,email',
                 'operatorFollowUp.assignedBy:id,name,email',
+                'operatorFollowUp.resolvedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -59,6 +61,19 @@ class DeviceShowController extends Controller
             ->latest()
             ->limit(5)
             ->get();
+
+        $assignableUsers = User::query()
+            ->where(function ($query) use ($device, $request) {
+                $query->whereHas('tenantMemberships', fn ($memberships) => $memberships->where('tenant_id', $device->tenant_id));
+
+                if ($request->user()?->isPlatformAdmin()) {
+                    $query->orWhere('id', $request->user()->id);
+                }
+            })
+            ->orderBy('name')
+            ->get()
+            ->unique('id')
+            ->values();
 
         return Inertia::render('operations/device-show', [
             'viewer' => $scope['viewer'],
@@ -153,7 +168,10 @@ class DeviceShowController extends Controller
                 ])->all(),
             'follow_up' => $device->operatorFollowUp ? [
                 'assigned_at' => $device->operatorFollowUp->assigned_at?->toIso8601String(),
+                'status' => $device->operatorFollowUp->status->value,
+                'resolved_at' => $device->operatorFollowUp->resolved_at?->toIso8601String(),
                 'owned_by_viewer' => $device->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                'assigned_user_id' => $device->operatorFollowUp->assigned_user_id,
                 'assigned_user' => $device->operatorFollowUp->assignedUser ? [
                     'name' => $device->operatorFollowUp->assignedUser->name,
                     'email' => $device->operatorFollowUp->assignedUser->email,
@@ -162,7 +180,16 @@ class DeviceShowController extends Controller
                     'name' => $device->operatorFollowUp->assignedBy->name,
                     'email' => $device->operatorFollowUp->assignedBy->email,
                 ] : null,
+                'resolved_by' => $device->operatorFollowUp->resolvedBy ? [
+                    'name' => $device->operatorFollowUp->resolvedBy->name,
+                    'email' => $device->operatorFollowUp->resolvedBy->email,
+                ] : null,
             ] : null,
+            'assignable_users' => $assignableUsers->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])->all(),
             'notes' => $device->operatorNotes
                 ->sortByDesc('created_at')
                 ->values()

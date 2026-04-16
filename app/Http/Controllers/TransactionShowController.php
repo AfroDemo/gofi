@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,13 +33,26 @@ class TransactionShowController extends Controller
                 'hotspotSessions.branch:id,name',
                 'hotspotSessions.accessPackage:id,name',
                 'ledgerEntries:id,tenant_id,transaction_id,direction,entry_type,amount,currency,balance_after,description,posted_at',
-                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,resolved_by_user_id,followable_type,followable_id,assigned_at,status,resolved_at',
                 'operatorFollowUp.assignedUser:id,name,email',
                 'operatorFollowUp.assignedBy:id,name,email',
+                'operatorFollowUp.resolvedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
             ->findOrFail($transaction->id);
+        $assignableUsers = User::query()
+            ->where(function ($query) use ($transaction, $request) {
+                $query->whereHas('tenantMemberships', fn ($memberships) => $memberships->where('tenant_id', $transaction->tenant_id));
+
+                if ($request->user()?->isPlatformAdmin()) {
+                    $query->orWhere('id', $request->user()->id);
+                }
+            })
+            ->orderBy('name')
+            ->get()
+            ->unique('id')
+            ->values();
         $paymentMetadata = is_array($transaction->metadata) ? ($transaction->metadata['payment'] ?? []) : [];
         $pendingAgeMinutes = $transaction->status === TransactionStatus::Pending
             ? (int) ceil($transaction->created_at?->diffInSeconds(now()) / 60)
@@ -143,7 +157,10 @@ class TransactionShowController extends Controller
                     ]),
                 'follow_up' => $transaction->operatorFollowUp ? [
                     'assigned_at' => $transaction->operatorFollowUp->assigned_at?->toIso8601String(),
+                    'status' => $transaction->operatorFollowUp->status->value,
+                    'resolved_at' => $transaction->operatorFollowUp->resolved_at?->toIso8601String(),
                     'owned_by_viewer' => $transaction->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                    'assigned_user_id' => $transaction->operatorFollowUp->assigned_user_id,
                     'assigned_user' => $transaction->operatorFollowUp->assignedUser ? [
                         'name' => $transaction->operatorFollowUp->assignedUser->name,
                         'email' => $transaction->operatorFollowUp->assignedUser->email,
@@ -152,7 +169,16 @@ class TransactionShowController extends Controller
                         'name' => $transaction->operatorFollowUp->assignedBy->name,
                         'email' => $transaction->operatorFollowUp->assignedBy->email,
                     ] : null,
+                    'resolved_by' => $transaction->operatorFollowUp->resolvedBy ? [
+                        'name' => $transaction->operatorFollowUp->resolvedBy->name,
+                        'email' => $transaction->operatorFollowUp->resolvedBy->email,
+                    ] : null,
                 ] : null,
+                'assignable_users' => $assignableUsers->map(fn (User $user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ])->all(),
                 'notes' => $transaction->operatorNotes
                     ->sortByDesc('created_at')
                     ->values()

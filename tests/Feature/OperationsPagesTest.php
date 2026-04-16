@@ -264,4 +264,64 @@ class OperationsPagesTest extends TestCase
                 ->where('transactions.0.attention_level', 'stale_pending')
             );
     }
+
+    public function test_branch_and_device_pages_can_filter_mine_follow_ups(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $operator = User::query()->where('email', 'moses@coastfi.test')->firstOrFail();
+
+        $this->actingAs($operator)
+            ->get('/branches?follow_up=mine')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/branches', false)
+                ->where('filters.follow_up', 'mine')
+                ->where('summary.open_follow_ups', 1)
+                ->has('branches', 1)
+                ->where('branches.0.code', 'MWG')
+                ->where('branches.0.follow_up_status', 'needs_follow_up')
+                ->where('branches.0.follow_up_assignee', 'Moses Ally')
+                ->where('branches.0.follow_up_owned_by_viewer', true)
+            );
+
+        $this->actingAs($operator)
+            ->get('/devices?follow_up=mine')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/devices', false)
+                ->where('filters.follow_up', 'mine')
+                ->where('summary.open_follow_ups', 1)
+                ->has('devices', 1)
+                ->where('devices.0.identifier', 'MWG-RTR-01')
+                ->where('devices.0.follow_up_status', 'needs_follow_up')
+                ->where('devices.0.follow_up_assignee', 'Moses Ally')
+                ->where('devices.0.follow_up_owned_by_viewer', true)
+            );
+    }
+
+    public function test_transactions_page_can_filter_resolved_follow_ups(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $owner = User::query()->where('email', 'amina@coastfi.test')->firstOrFail();
+        $transaction = Transaction::query()->where('reference', 'TXN-1003')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('transactions.follow-up.resolve', $transaction))
+            ->assertRedirect(route('transactions.show', $transaction));
+
+        $this->actingAs($owner)
+            ->get('/transactions?follow_up=resolved')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/transactions', false)
+                ->where('filters.follow_up', 'resolved')
+                ->where('summary.open_follow_ups', 0)
+                ->has('transactions', 1)
+                ->where('transactions.0.reference', 'TXN-1003')
+                ->where('transactions.0.follow_up_status', 'resolved')
+                ->where('transactions.0.follow_up_assignee', 'Amina Juma')
+            );
+    }
 }

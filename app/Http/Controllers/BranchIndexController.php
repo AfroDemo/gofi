@@ -6,9 +6,11 @@ use App\Enums\BranchStatus;
 use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
 use App\Enums\HotspotSessionStatus;
+use App\Enums\OperatorFollowUpStatus;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\Branch;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,8 +31,13 @@ class BranchIndexController extends Controller
             'attention' => in_array($request->string('attention')->toString(), ['all', 'review', 'unavailable', 'open_incidents'], true)
                 ? $request->string('attention')->toString()
                 : 'all',
+            'follow_up' => in_array($request->string('follow_up')->toString(), ['all', 'open', 'mine', 'resolved', 'none'], true)
+                ? $request->string('follow_up')->toString()
+                : 'all',
         ];
         $stalePendingCutoff = now()->subMinutes(5);
+        /** @var User $viewer */
+        $viewer = $scope['user'];
 
         $branches = Branch::query()
             ->whereIn('tenant_id', $scope['tenant_ids'])
@@ -66,7 +73,28 @@ class BranchIndexController extends Controller
                         });
                 });
             })
-            ->with(['tenant:id,name,currency', 'manager:id,name,email'])
+            ->when($filters['follow_up'] === 'open', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::NeedsFollowUp->value));
+            })
+            ->when($filters['follow_up'] === 'mine', function (Builder $query) use ($viewer) {
+                $query->whereHas('operatorFollowUp', function (Builder $followUp) use ($viewer) {
+                    $followUp
+                        ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value)
+                        ->where('assigned_user_id', $viewer->id);
+                });
+            })
+            ->when($filters['follow_up'] === 'resolved', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::Resolved->value));
+            })
+            ->when($filters['follow_up'] === 'none', function (Builder $query) {
+                $query->whereDoesntHave('operatorFollowUp');
+            })
+            ->with([
+                'tenant:id,name,currency',
+                'manager:id,name,email',
+                'operatorFollowUp:id,assigned_user_id,followable_type,followable_id,status',
+                'operatorFollowUp.assignedUser:id,name,email',
+            ])
             ->withCount('devices')
             ->withCount([
                 'devices as online_devices_count' => fn (Builder $query) => $query->where('status', DeviceStatus::Online),
@@ -92,6 +120,9 @@ class BranchIndexController extends Controller
                 'unavailable' => $branches->filter(fn (Branch $branch) => in_array($branch->status, [BranchStatus::Maintenance, BranchStatus::Inactive], true))->count(),
                 'online_devices' => (int) $branches->sum('online_devices_count'),
                 'open_incidents' => (int) $branches->sum('open_incidents_count'),
+                'open_follow_ups' => $branches->filter(
+                    fn (Branch $branch) => $branch->operatorFollowUp?->status === OperatorFollowUpStatus::NeedsFollowUp
+                )->count(),
                 'active_sessions' => (int) $branches->sum('active_sessions_count'),
                 'successful_revenue' => (float) $branches->sum(fn (Branch $branch) => (float) ($branch->successful_revenue ?? 0)),
             ],
@@ -112,6 +143,9 @@ class BranchIndexController extends Controller
                 'stale_pending_transactions_count' => $branch->stale_pending_transactions_count,
                 'successful_revenue' => (float) ($branch->successful_revenue ?? 0),
                 'currency' => $branch->tenant?->currency,
+                'follow_up_status' => $branch->operatorFollowUp?->status?->value,
+                'follow_up_assignee' => $branch->operatorFollowUp?->assignedUser?->name,
+                'follow_up_owned_by_viewer' => $branch->operatorFollowUp?->assigned_user_id === $viewer->id,
                 'attention_reason' => $this->attentionReason($branch),
             ])->values(),
         ]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OperatorFollowUpStatus;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\Transaction;
@@ -29,8 +30,12 @@ class TransactionIndexController extends Controller
             'attention' => in_array($request->string('attention')->toString(), ['all', 'review', 'stale_pending'], true)
                 ? $request->string('attention')->toString()
                 : 'all',
+            'follow_up' => in_array($request->string('follow_up')->toString(), ['all', 'open', 'mine', 'resolved', 'none'], true)
+                ? $request->string('follow_up')->toString()
+                : 'all',
         ];
         $stalePendingCutoff = now()->subMinutes(5);
+        $viewerId = $scope['user']->id;
 
         $transactions = Transaction::query()
             ->whereIn('tenant_id', $tenantIds)
@@ -66,12 +71,30 @@ class TransactionIndexController extends Controller
                     ->where('status', TransactionStatus::Pending->value)
                     ->where('created_at', '<=', $stalePendingCutoff);
             })
+            ->when($filters['follow_up'] === 'open', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::NeedsFollowUp->value));
+            })
+            ->when($filters['follow_up'] === 'mine', function (Builder $query) use ($viewerId) {
+                $query->whereHas('operatorFollowUp', function (Builder $followUp) use ($viewerId) {
+                    $followUp
+                        ->where('status', OperatorFollowUpStatus::NeedsFollowUp->value)
+                        ->where('assigned_user_id', $viewerId);
+                });
+            })
+            ->when($filters['follow_up'] === 'resolved', function (Builder $query) {
+                $query->whereHas('operatorFollowUp', fn (Builder $followUp) => $followUp->where('status', OperatorFollowUpStatus::Resolved->value));
+            })
+            ->when($filters['follow_up'] === 'none', function (Builder $query) {
+                $query->whereDoesntHave('operatorFollowUp');
+            })
             ->with([
                 'tenant:id,name',
                 'branch:id,name',
                 'accessPackage:id,name',
                 'initiator:id,name',
                 'revenueAllocation:id,transaction_id,platform_amount,tenant_amount',
+                'operatorFollowUp:id,assigned_user_id,followable_type,followable_id,status',
+                'operatorFollowUp.assignedUser:id,name,email',
             ])
             ->latest()
             ->get();
@@ -98,6 +121,9 @@ class TransactionIndexController extends Controller
                 'needs_review_count' => $transactions->filter(fn (Transaction $transaction) => $this->attentionLevel($transaction) !== null)->count(),
                 'stale_pending_count' => $transactions->filter(fn (Transaction $transaction) => $this->attentionLevel($transaction) === 'stale_pending')->count(),
                 'failed_count' => $transactions->where('status', TransactionStatus::Failed)->count(),
+                'open_follow_ups' => $transactions->filter(
+                    fn (Transaction $transaction) => $transaction->operatorFollowUp?->status === OperatorFollowUpStatus::NeedsFollowUp
+                )->count(),
                 'platform_share' => (float) $transactions->sum(fn (Transaction $transaction) => (float) ($transaction->revenueAllocation?->platform_amount ?? 0)),
                 'tenant_share' => (float) $transactions->sum(fn (Transaction $transaction) => (float) ($transaction->revenueAllocation?->tenant_amount ?? 0)),
             ],
@@ -119,6 +145,9 @@ class TransactionIndexController extends Controller
                 'tenant_amount' => (float) ($transaction->revenueAllocation?->tenant_amount ?? 0),
                 'attention_level' => $this->attentionLevel($transaction),
                 'attention_reason' => $this->attentionReason($transaction),
+                'follow_up_status' => $transaction->operatorFollowUp?->status?->value,
+                'follow_up_assignee' => $transaction->operatorFollowUp?->assignedUser?->name,
+                'follow_up_owned_by_viewer' => $transaction->operatorFollowUp?->assigned_user_id === $viewerId,
                 'pending_age_minutes' => $transaction->status === TransactionStatus::Pending
                     ? (int) ceil($transaction->created_at?->diffInSeconds(now()) / 60)
                     : null,
