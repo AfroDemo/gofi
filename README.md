@@ -209,7 +209,7 @@ docs/
 ## ⚙️ Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/go-fi.git
+git clone https://github.com/afrodemo/gofi.git
 cd go-fi
 
 composer install

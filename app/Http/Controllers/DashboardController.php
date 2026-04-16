@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\DeviceStatus;
 use App\Enums\HotspotSessionStatus;
 use App\Enums\PayoutStatus;
-use App\Enums\PlatformRole;
 use App\Enums\TenantStatus;
 use App\Enums\TransactionStatus;
+use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\Branch;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
@@ -21,18 +21,14 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    use ResolvesWorkspaceScope;
+
     public function __invoke(Request $request): Response
     {
-        $user = $request->user();
-        $tenantMembership = $user->tenantMemberships()->with('tenant')->orderByDesc('is_primary')->first();
-
-        $isPlatformAdmin = $user->isPlatformAdmin();
-        $tenantScope = $isPlatformAdmin ? null : $tenantMembership?->tenant;
-        $tenantIds = match (true) {
-            $isPlatformAdmin => Tenant::query()->pluck('id')->all(),
-            $tenantScope !== null => [$tenantScope->id],
-            default => [],
-        };
+        $scope = $this->resolveWorkspaceScope($request);
+        $isPlatformAdmin = $scope['is_platform_admin'];
+        $tenantScope = $scope['tenant'];
+        $tenantIds = $scope['tenant_ids'];
 
         $transactions = Transaction::query()->whereIn('tenant_id', $tenantIds);
         $sessions = HotspotSession::query()->whereIn('tenant_id', $tenantIds);
@@ -41,11 +37,7 @@ class DashboardController extends Controller
         $payouts = Payout::query()->whereIn('tenant_id', $tenantIds);
 
         return Inertia::render('dashboard', [
-            'viewer' => [
-                'scope' => $isPlatformAdmin ? 'platform' : 'tenant',
-                'name' => $tenantScope?->name ?? ($isPlatformAdmin ? 'Platform overview' : 'No tenant assigned'),
-                'role' => ($user->platform_role ?? PlatformRole::TenantUser)->value,
-            ],
+            'viewer' => $scope['viewer'],
             'summary' => [
                 'revenue' => (float) (clone $transactions)
                     ->where('status', TransactionStatus::Successful)
