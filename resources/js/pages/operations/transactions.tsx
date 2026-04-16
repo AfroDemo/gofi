@@ -2,12 +2,13 @@ import { OpsFilters } from '@/components/ops/ops-filters';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime, formatMoney } from '@/lib/formatters';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { BadgeDollarSign, CircleAlert, CircleOff, HandCoins, WalletCards } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { BadgeDollarSign, CircleAlert, CircleOff, Eye, HandCoins, WalletCards } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -191,6 +192,12 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                             <p className="text-muted-foreground text-sm">
                                                 Gateway fee {formatMoney(transaction.gateway_fee, transaction.currency)}
                                             </p>
+                                            <Button asChild variant="outline" size="sm" className="mt-3 rounded-lg">
+                                                <Link href={route('transactions.show', transaction.id)}>
+                                                    <Eye className="size-4" />
+                                                    View
+                                                </Link>
+                                            </Button>
                                         </div>
                                     </div>
 

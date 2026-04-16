@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageIndexController;
 use App\Http\Controllers\PackageManagementController;
 use App\Http\Controllers\TransactionIndexController;
+use App\Http\Controllers\TransactionShowController;
 use App\Http\Controllers\VoucherIndexController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -21,6 +22,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('packages/{package}', [PackageManagementController::class, 'update'])->name('packages.update');
     Route::get('vouchers', VoucherIndexController::class)->name('vouchers.index');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
+    Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
 });
 
 require __DIR__.'/settings.php';

@@ -139,7 +139,9 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                     <Card className="border-border/70">
                         <CardHeader>
                             <CardTitle>{mode === 'create' ? 'Package details' : 'Update package details'}</CardTitle>
-                            <CardDescription>Set the commercial shape of the offer, then map it to a branch if it should be sold in a specific location.</CardDescription>
+                            <CardDescription>
+                                Set the commercial shape of the offer, then map it to a branch if it should be sold in a specific location.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
@@ -163,7 +165,10 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
 
                                     <div className="space-y-2">
                                         <Label htmlFor="branch_id">Branch</Label>
-                                        <Select value={form.data.branch_id || 'none'} onValueChange={(value) => form.setData('branch_id', value === 'none' ? '' : value)}>
+                                        <Select
+                                            value={form.data.branch_id || 'none'}
+                                            onValueChange={(value) => form.setData('branch_id', value === 'none' ? '' : value)}
+                                        >
                                             <SelectTrigger id="branch_id">
                                                 <SelectValue placeholder="All branches or tenant-wide" />
                                             </SelectTrigger>
@@ -183,7 +188,12 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Package name</Label>
-                                        <Input id="name" value={form.data.name} onChange={(event) => form.setData('name', event.target.value)} placeholder="Starter hour, Day pass, Flex bundle" />
+                                        <Input
+                                            id="name"
+                                            value={form.data.name}
+                                            onChange={(event) => form.setData('name', event.target.value)}
+                                            placeholder="Starter hour, Day pass, Flex bundle"
+                                        />
                                         <InputError message={form.errors.name} />
                                     </div>
 
@@ -212,7 +222,7 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                         value={form.data.description}
                                         onChange={(event) => form.setData('description', event.target.value)}
                                         placeholder="Short customer-facing explanation of what the package includes."
-                                        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-28 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-28 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                                     />
                                     <InputError message={form.errors.description} />
                                 </div>
@@ -220,7 +230,15 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="price">Price</Label>
-                                        <Input id="price" type="number" min="0" step="0.01" value={form.data.price} onChange={(event) => form.setData('price', event.target.value)} placeholder="1000" />
+                                        <Input
+                                            id="price"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={form.data.price}
+                                            onChange={(event) => form.setData('price', event.target.value)}
+                                            placeholder="1000"
+                                        />
                                         <InputError message={form.errors.price} />
                                     </div>
 
@@ -265,10 +283,16 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                    <Checkbox id="is_active" checked={form.data.is_active} onCheckedChange={(checked) => form.setData('is_active', checked === true)} />
+                                    <Checkbox
+                                        id="is_active"
+                                        checked={form.data.is_active}
+                                        onCheckedChange={(checked) => form.setData('is_active', checked === true)}
+                                    />
                                     <div>
                                         <Label htmlFor="is_active">Package is active</Label>
-                                        <p className="text-muted-foreground text-sm">Inactive packages stay in the system but stop appearing as live offers.</p>
+                                        <p className="text-muted-foreground text-sm">
+                                            Inactive packages stay in the system but stop appearing as live offers.
+                                        </p>
                                     </div>
                                 </div>
                                 <InputError message={form.errors.is_active} />
@@ -288,7 +312,9 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                     <Card className="border-border/70">
                         <CardHeader>
                             <CardTitle>Operational guidance</CardTitle>
-                            <CardDescription>These cues make the form closer to the real hotspot domain instead of a generic SaaS CRUD screen.</CardDescription>
+                            <CardDescription>
+                                These cues make the form closer to the real hotspot domain instead of a generic SaaS CRUD screen.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="border-border/60 rounded-2xl border px-4 py-4">
@@ -296,7 +322,9 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                     <Package2 className="text-primary size-4" />
                                     <p className="font-medium">Selected type</p>
                                 </div>
-                                <p className="text-muted-foreground mt-2 text-sm">{selectedType?.description ?? 'Choose a package type to guide validation and offer design.'}</p>
+                                <p className="text-muted-foreground mt-2 text-sm">
+                                    {selectedType?.description ?? 'Choose a package type to guide validation and offer design.'}
+                                </p>
                             </div>
 
                             <div className="border-border/60 rounded-2xl border px-4 py-4">
@@ -305,7 +333,9 @@ export default function PackageForm({ mode, viewer, packageTypes, tenantOptions,
                                     <Badge variant="secondary" className="rounded-full px-3 py-1">
                                         {selectedTenant?.currency ?? 'No currency'}
                                     </Badge>
-                                    <p className="text-muted-foreground text-sm">Currency follows the selected tenant to keep branch sales aligned.</p>
+                                    <p className="text-muted-foreground text-sm">
+                                        Currency follows the selected tenant to keep branch sales aligned.
+                                    </p>
                                 </div>
                             </div>
 
