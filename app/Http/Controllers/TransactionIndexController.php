@@ -26,7 +26,11 @@ class TransactionIndexController extends Controller
             'source' => in_array($request->string('source')->toString(), ['all', 'mobile_money', 'voucher', 'manual'], true)
                 ? $request->string('source')->toString()
                 : 'all',
+            'attention' => in_array($request->string('attention')->toString(), ['all', 'review', 'stale_pending'], true)
+                ? $request->string('attention')->toString()
+                : 'all',
         ];
+        $stalePendingCutoff = now()->subMinutes(5);
 
         $transactions = Transaction::query()
             ->whereIn('tenant_id', $tenantIds)
@@ -46,6 +50,22 @@ class TransactionIndexController extends Controller
             })
             ->when($filters['status'] !== 'all', fn (Builder $query) => $query->where('status', $filters['status']))
             ->when($filters['source'] !== 'all', fn (Builder $query) => $query->where('source', $filters['source']))
+            ->when($filters['attention'] === 'review', function (Builder $query) use ($stalePendingCutoff) {
+                $query->where(function (Builder $nested) use ($stalePendingCutoff) {
+                    $nested
+                        ->whereIn('status', [TransactionStatus::Failed->value, TransactionStatus::Cancelled->value])
+                        ->orWhere(function (Builder $pending) use ($stalePendingCutoff) {
+                            $pending
+                                ->where('status', TransactionStatus::Pending->value)
+                                ->where('created_at', '<=', $stalePendingCutoff);
+                        });
+                });
+            })
+            ->when($filters['attention'] === 'stale_pending', function (Builder $query) use ($stalePendingCutoff) {
+                $query
+                    ->where('status', TransactionStatus::Pending->value)
+                    ->where('created_at', '<=', $stalePendingCutoff);
+            })
             ->with([
                 'tenant:id,name',
                 'branch:id,name',
@@ -75,6 +95,8 @@ class TransactionIndexController extends Controller
                     ->where('status', TransactionStatus::Successful)
                     ->sum('amount'),
                 'pending_count' => $transactions->where('status', TransactionStatus::Pending)->count(),
+                'needs_review_count' => $transactions->filter(fn (Transaction $transaction) => $this->attentionLevel($transaction) !== null)->count(),
+                'stale_pending_count' => $transactions->filter(fn (Transaction $transaction) => $this->attentionLevel($transaction) === 'stale_pending')->count(),
                 'failed_count' => $transactions->where('status', TransactionStatus::Failed)->count(),
                 'platform_share' => (float) $transactions->sum(fn (Transaction $transaction) => (float) ($transaction->revenueAllocation?->platform_amount ?? 0)),
                 'tenant_share' => (float) $transactions->sum(fn (Transaction $transaction) => (float) ($transaction->revenueAllocation?->tenant_amount ?? 0)),
@@ -95,9 +117,35 @@ class TransactionIndexController extends Controller
                 'currency' => $transaction->currency,
                 'platform_amount' => (float) ($transaction->revenueAllocation?->platform_amount ?? 0),
                 'tenant_amount' => (float) ($transaction->revenueAllocation?->tenant_amount ?? 0),
+                'attention_level' => $this->attentionLevel($transaction),
+                'attention_reason' => $this->attentionReason($transaction),
+                'pending_age_minutes' => $transaction->status === TransactionStatus::Pending
+                    ? (int) ceil($transaction->created_at?->diffInSeconds(now()) / 60)
+                    : null,
                 'confirmed_at' => $transaction->confirmed_at?->toIso8601String(),
                 'created_at' => $transaction->created_at?->toIso8601String(),
             ])->values(),
         ]);
+    }
+
+    protected function attentionLevel(Transaction $transaction): ?string
+    {
+        return match (true) {
+            $transaction->status === TransactionStatus::Pending
+                && $transaction->created_at?->lte(now()->subMinutes(5)) => 'stale_pending',
+            $transaction->status === TransactionStatus::Failed => 'failed_payment',
+            $transaction->status === TransactionStatus::Cancelled => 'cancelled_payment',
+            default => null,
+        };
+    }
+
+    protected function attentionReason(Transaction $transaction): ?string
+    {
+        return match ($this->attentionLevel($transaction)) {
+            'stale_pending' => 'Payment is still pending after several minutes and may need callback or provider follow-up.',
+            'failed_payment' => 'Payment attempt failed and did not grant access.',
+            'cancelled_payment' => 'Payment attempt was cancelled before it completed.',
+            default => null,
+        };
     }
 }

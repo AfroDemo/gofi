@@ -2,9 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TransactionSource;
+use App\Enums\TransactionStatus;
+use App\Models\AccessPackage;
+use App\Models\Branch;
+use App\Models\RevenueShareRule;
+use App\Models\Tenant;
+use App\Models\Transaction;
 use App\Models\User;
 use Database\Seeders\DemoPlatformSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -110,6 +118,62 @@ class OperationsPagesTest extends TestCase
                 ->where('summary.pending_count', 1)
                 ->has('transactions', 1)
                 ->where('transactions.0.reference', 'TXN-1003')
+            );
+    }
+
+    public function test_transactions_page_can_filter_attention_watchlist(): void
+    {
+        $this->seed(DemoPlatformSeeder::class);
+
+        $admin = User::query()->where('email', 'admin@gofi.test')->firstOrFail();
+        $tenant = Tenant::query()->where('slug', 'coastfi-networks')->firstOrFail();
+        $branch = Branch::query()->where('tenant_id', $tenant->id)->where('code', 'KRK')->firstOrFail();
+        $package = AccessPackage::query()->where('tenant_id', $tenant->id)->where('name', 'Coast Quick Hour')->firstOrFail();
+        $rule = RevenueShareRule::query()->where('tenant_id', $tenant->id)->firstOrFail();
+
+        $transaction = Transaction::query()->create([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'access_package_id' => $package->id,
+            'revenue_share_rule_id' => $rule->id,
+            'source' => TransactionSource::MobileMoney,
+            'status' => TransactionStatus::Pending,
+            'reference' => 'TXN-WATCH-100',
+            'provider_reference' => 'SELCOM-WATCH-100',
+            'phone_number' => '255712000666',
+            'amount' => 1000,
+            'gateway_fee' => 0,
+            'currency' => 'TZS',
+        ]);
+
+        $transaction->timestamps = false;
+        $transaction->forceFill([
+            'created_at' => Carbon::now()->subMinutes(8),
+            'updated_at' => Carbon::now()->subMinutes(8),
+        ])->save();
+
+        $this->actingAs($admin)
+            ->get('/transactions?attention=review')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/transactions', false)
+                ->where('filters.attention', 'review')
+                ->where('summary.needs_review_count', 2)
+                ->where('summary.stale_pending_count', 1)
+                ->has('transactions', 2)
+            );
+
+        $this->actingAs($admin)
+            ->get('/transactions?attention=stale_pending')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operations/transactions', false)
+                ->where('filters.attention', 'stale_pending')
+                ->where('summary.needs_review_count', 1)
+                ->where('summary.stale_pending_count', 1)
+                ->has('transactions', 1)
+                ->where('transactions.0.reference', 'TXN-WATCH-100')
+                ->where('transactions.0.attention_level', 'stale_pending')
             );
     }
 }

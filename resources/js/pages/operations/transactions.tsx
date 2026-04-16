@@ -8,7 +8,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatDateTime, formatMoney } from '@/lib/formatters';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { BadgeDollarSign, CircleAlert, CircleOff, Eye, HandCoins, WalletCards } from 'lucide-react';
+import { BadgeDollarSign, CircleAlert, CircleOff, Eye, HandCoins, ShieldAlert, WalletCards } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -25,6 +25,8 @@ interface Viewer {
 interface Summary {
     gross_successful: number;
     pending_count: number;
+    needs_review_count: number;
+    stale_pending_count: number;
     failed_count: number;
     platform_share: number;
     tenant_share: number;
@@ -51,6 +53,9 @@ interface TransactionRow {
     currency: string | null;
     platform_amount: number;
     tenant_amount: number;
+    attention_level: string | null;
+    attention_reason: string | null;
+    pending_age_minutes: number | null;
     confirmed_at: string | null;
     created_at: string | null;
 }
@@ -61,6 +66,7 @@ interface TransactionsPageProps {
         search: string;
         status: string;
         source: string;
+        attention: string;
     };
     summary: Summary;
     sourceMix: SourceMixRow[];
@@ -75,6 +81,9 @@ const tone: Record<string, string> = {
     voucher: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
     mobile_money: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300',
     manual: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
+    stale_pending: 'bg-orange-500/10 text-orange-700 dark:text-orange-300',
+    failed_payment: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    cancelled_payment: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
 export default function Transactions({ viewer, filters, summary, sourceMix, transactions }: TransactionsPageProps) {
@@ -91,7 +100,7 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                 <OpsFilters
                     search={filters.search}
                     searchPlaceholder="Search reference, phone, package, branch, tenant, or operator"
-                    values={{ status: filters.status, source: filters.source }}
+                    values={{ status: filters.status, source: filters.source, attention: filters.attention }}
                     fields={[
                         {
                             key: 'status',
@@ -116,11 +125,21 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                 { label: 'Manual', value: 'manual' },
                             ],
                         },
+                        {
+                            key: 'attention',
+                            label: 'Attention',
+                            placeholder: 'All transactions',
+                            options: [
+                                { label: 'All transactions', value: 'all' },
+                                { label: 'Needs review', value: 'review' },
+                                { label: 'Stale pending', value: 'stale_pending' },
+                            ],
+                        },
                     ]}
                     resultLabel={`${transactions.length} transaction matches in the current workspace.`}
                 />
 
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                     <OpsStatCard
                         label="Successful gross"
                         value={formatMoney(summary.gross_successful, viewer.currency)}
@@ -132,6 +151,12 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                         value={summary.pending_count.toString()}
                         hint="Transactions still waiting on payment confirmation."
                         icon={CircleAlert}
+                    />
+                    <OpsStatCard
+                        label="Needs review"
+                        value={summary.needs_review_count.toString()}
+                        hint="Failed, cancelled, or stale pending transactions that need operator follow-up."
+                        icon={ShieldAlert}
                     />
                     <OpsStatCard
                         label="Failed payments"
@@ -177,6 +202,11 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                                 <Badge variant="outline" className={tone[transaction.status] ?? ''}>
                                                     {transaction.status}
                                                 </Badge>
+                                                {transaction.attention_level && (
+                                                    <Badge variant="outline" className={tone[transaction.attention_level] ?? ''}>
+                                                        {transaction.attention_level.replaceAll('_', ' ')}
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <p className="text-muted-foreground text-sm">
                                                 {[transaction.package, transaction.branch, transaction.tenant].filter(Boolean).join(' • ') ||
@@ -186,6 +216,12 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                                 Initiated by {transaction.initiated_by ?? 'Unknown operator'}
                                                 {transaction.phone_number ? ` • ${transaction.phone_number}` : ''}
                                             </p>
+                                            {transaction.attention_reason && (
+                                                <p className="text-sm text-orange-700 dark:text-orange-300">
+                                                    {transaction.attention_reason}
+                                                    {transaction.pending_age_minutes ? ` (${transaction.pending_age_minutes} min old)` : ''}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="text-left xl:text-right">
                                             <p className="text-lg font-semibold">{formatMoney(transaction.amount, transaction.currency)}</p>
@@ -226,8 +262,8 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
 
                     <Card className="border-border/70">
                         <CardHeader>
-                            <CardTitle>Channel mix</CardTitle>
-                            <CardDescription>Which payment rails are carrying the current sales volume.</CardDescription>
+                            <CardTitle>Channel mix and watchlist</CardTitle>
+                            <CardDescription>Which payment rails are carrying volume and which transactions need attention.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {sourceMix.length === 0 && (
@@ -244,6 +280,12 @@ export default function Transactions({ viewer, filters, summary, sourceMix, tran
                                     <p className="font-semibold">{formatMoney(item.amount, viewer.currency)}</p>
                                 </div>
                             ))}
+                            <div className="border-border/60 rounded-xl border px-4 py-4">
+                                <p className="font-medium">Attention snapshot</p>
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                    {summary.needs_review_count} transactions need review, including {summary.stale_pending_count} stale pending payments.
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
                 </section>
