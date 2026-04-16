@@ -44,6 +44,11 @@ class Branch extends Model
         return $this->hasMany(HotspotDevice::class);
     }
 
+    public function deviceIncidents(): HasMany
+    {
+        return $this->hasMany(DeviceIncident::class);
+    }
+
     public function packages(): HasMany
     {
         return $this->hasMany(AccessPackage::class);

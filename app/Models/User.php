@@ -74,6 +74,16 @@ class User extends Authenticatable
         return $this->hasMany(Branch::class, 'manager_user_id');
     }
 
+    public function reportedDeviceIncidents(): HasMany
+    {
+        return $this->hasMany(DeviceIncident::class, 'reported_by_user_id');
+    }
+
+    public function resolvedDeviceIncidents(): HasMany
+    {
+        return $this->hasMany(DeviceIncident::class, 'resolved_by_user_id');
+    }
+
     public function createdVouchers(): HasMany
     {
         return $this->hasMany(Voucher::class, 'created_by_user_id');

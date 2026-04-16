@@ -3,6 +3,8 @@
 use App\Http\Controllers\BranchIndexController;
 use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceIncidentResolveController;
+use App\Http\Controllers\DeviceIncidentStoreController;
 use App\Http\Controllers\DeviceIndexController;
 use App\Http\Controllers\DeviceShowController;
 use App\Http\Controllers\PackageIndexController;
@@ -59,6 +61,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'create'])->name('voucher-batches.create');
     Route::post('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'store'])->name('voucher-batches.store');
     Route::get('devices', DeviceIndexController::class)->name('devices.index');
+    Route::post('devices/{device}/incidents', DeviceIncidentStoreController::class)->name('devices.incidents.store');
+    Route::post('devices/{device}/incidents/{incident}/resolve', DeviceIncidentResolveController::class)->name('devices.incidents.resolve');
     Route::get('devices/{device}', DeviceShowController::class)->name('devices.show');
     Route::get('sessions', SessionIndexController::class)->name('sessions.index');
     Route::post('sessions/{session}/terminate', SessionTerminationController::class)->name('sessions.terminate');

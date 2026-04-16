@@ -34,9 +34,11 @@ class DeviceShowTest extends TestCase
                 ->where('device.status', 'online')
                 ->where('device.branch.name', 'Kariakoo Hub')
                 ->where('branch_overview.device_count', 1)
+                ->where('branch_overview.open_incidents', 0)
                 ->where('branch_overview.active_sessions', 1)
                 ->has('recent_sessions', 2)
                 ->has('recent_transactions', 2)
+                ->has('incidents', 1)
             );
     }
 

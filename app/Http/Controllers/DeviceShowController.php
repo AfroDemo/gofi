@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
 use App\Enums\HotspotSessionStatus;
 use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\AccessPackage;
+use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
 use App\Models\Transaction;
@@ -28,6 +30,9 @@ class DeviceShowController extends Controller
                 'tenant:id,name',
                 'branch:id,tenant_id,name,code,location,address,manager_user_id',
                 'branch.manager:id,name,email',
+                'incidents:id,tenant_id,branch_id,hotspot_device_id,reported_by_user_id,resolved_by_user_id,title,details,severity,status,opened_at,resolved_at,resolution_notes',
+                'incidents.reporter:id,name,email',
+                'incidents.resolver:id,name,email',
             ])
             ->findOrFail($device->id);
 
@@ -88,6 +93,10 @@ class DeviceShowController extends Controller
                     ->where('created_at', '<=', now()->subMinutes(5))
                     ->count(),
                 'active_packages' => AccessPackage::query()->where('branch_id', $branchId)->where('is_active', true)->count(),
+                'open_incidents' => DeviceIncident::query()
+                    ->where('hotspot_device_id', $device->id)
+                    ->where('status', DeviceIncidentStatus::Open)
+                    ->count(),
             ],
             'recent_sessions' => $recentSessions->map(fn (HotspotSession $session) => [
                 'id' => $session->id,
@@ -109,6 +118,34 @@ class DeviceShowController extends Controller
                 'provider_reference' => $transaction->provider_reference,
                 'created_at' => $transaction->created_at?->toIso8601String(),
             ])->values(),
+            'incident_options' => [
+                ['value' => 'low', 'label' => 'Low'],
+                ['value' => 'medium', 'label' => 'Medium'],
+                ['value' => 'high', 'label' => 'High'],
+                ['value' => 'critical', 'label' => 'Critical'],
+            ],
+            'incidents' => $device->incidents
+                ->sortByDesc('opened_at')
+                ->values()
+                ->map(fn (DeviceIncident $incident) => [
+                    'id' => $incident->id,
+                    'title' => $incident->title,
+                    'details' => $incident->details,
+                    'severity' => $incident->severity->value,
+                    'status' => $incident->status->value,
+                    'opened_at' => $incident->opened_at?->toIso8601String(),
+                    'resolved_at' => $incident->resolved_at?->toIso8601String(),
+                    'resolution_notes' => $incident->resolution_notes,
+                    'reporter' => $incident->reporter ? [
+                        'name' => $incident->reporter->name,
+                        'email' => $incident->reporter->email,
+                    ] : null,
+                    'resolver' => $incident->resolver ? [
+                        'name' => $incident->resolver->name,
+                        'email' => $incident->resolver->email,
+                    ] : null,
+                    'can_resolve' => $incident->status === DeviceIncidentStatus::Open,
+                ])->all(),
         ]);
     }
 }

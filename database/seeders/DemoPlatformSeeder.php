@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Actions\Finance\CreateRevenueAllocation;
+use App\Enums\DeviceIncidentSeverity;
+use App\Enums\DeviceIncidentStatus;
 use App\Enums\DeviceStatus;
 use App\Enums\HotspotSessionStatus;
 use App\Enums\LedgerDirection;
@@ -17,6 +19,7 @@ use App\Enums\TransactionStatus;
 use App\Enums\VoucherStatus;
 use App\Models\AccessPackage;
 use App\Models\Branch;
+use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
 use App\Models\LedgerEntry;
@@ -161,6 +164,36 @@ class DemoPlatformSeeder extends Seeder
                 'metadata' => ['firmware' => 'stub-1.0'],
             ]);
         }
+
+        $kariakooRouter = HotspotDevice::query()->where('identifier', 'KRK-RTR-01')->firstOrFail();
+        $mwengeRouter = HotspotDevice::query()->where('identifier', 'MWG-RTR-01')->firstOrFail();
+
+        DeviceIncident::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $mwenge->id,
+            'hotspot_device_id' => $mwengeRouter->id,
+            'reported_by_user_id' => $coastOperator->id,
+            'title' => 'Router heartbeat missing',
+            'details' => 'Branch reports no response from the router after a power fluctuation. Customers cannot complete access checks reliably.',
+            'severity' => DeviceIncidentSeverity::High,
+            'status' => DeviceIncidentStatus::Open,
+            'opened_at' => $now->copy()->subHours(2),
+        ]);
+
+        DeviceIncident::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $kariakoo->id,
+            'hotspot_device_id' => $kariakooRouter->id,
+            'reported_by_user_id' => $coastOwner->id,
+            'resolved_by_user_id' => $coastOperator->id,
+            'title' => 'Intermittent uplink slowdown',
+            'details' => 'Customers saw brief login delays during the lunch rush.',
+            'severity' => DeviceIncidentSeverity::Medium,
+            'status' => DeviceIncidentStatus::Resolved,
+            'opened_at' => $now->copy()->subDay(),
+            'resolved_at' => $now->copy()->subDay()->addHours(2),
+            'resolution_notes' => 'Restarted upstream modem and confirmed portal performance recovered.',
+        ]);
 
         $coastHour = AccessPackage::create([
             'tenant_id' => $coastTenant->id,
