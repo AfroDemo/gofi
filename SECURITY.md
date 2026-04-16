@@ -1,44 +1,37 @@
 # Security Policy
 
-## Reporting a vulnerability
+## Reporting a Vulnerability
 
-If you discover a security issue, please report it privately.
+Please do **not** open a public GitHub issue for security vulnerabilities.
 
-Please do **not** open a public GitHub issue for a vulnerability that could put users, operators, or deployments at risk.
+Instead, report security concerns privately to the maintainer with:
+- affected area
+- steps to reproduce
+- possible impact
+- any proof-of-concept details
+- your contact information for follow-up
 
-## What to include
+## What to Expect
 
-Please include as much of the following as possible:
+Best-effort process:
+1. Acknowledge receipt
+2. Review and validate the report
+3. Assess severity and impact
+4. Prepare a fix or mitigation
+5. Coordinate disclosure if appropriate
 
-- affected component or area
-- description of the issue
-- impact
-- reproduction steps or proof of concept
-- suggested mitigation if known
-- version/commit details if relevant
+## Scope
 
-## Response expectations
+Security-sensitive areas include:
+- authentication and authorization
+- tenant isolation
+- payment processing
+- callback/webhook verification
+- voucher activation
+- session control
+- admin actions
+- secrets and configuration
 
-The maintainer will aim to:
+## Responsible Disclosure
 
-- acknowledge receipt in a reasonable time
-- investigate the report
-- decide whether the issue is valid and in scope
-- prepare a fix or mitigation when possible
-
-Response times may vary because this project may be maintained by a small team or solo founder.
-
-## Scope examples
-
-Examples of high-priority areas:
-
-- authentication and authorization bypass
-- tenant data leakage
-- payment callback abuse
-- voucher/session activation bypass
-- remote code execution or command injection
-- sensitive secret exposure
-
-## Disclosure
-
-Please allow reasonable time for investigation and patching before public disclosure.
+Please avoid public disclosure until the issue has been reviewed and a fix or mitigation is ready.

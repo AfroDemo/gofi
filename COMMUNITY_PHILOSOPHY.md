@@ -1,23 +1,23 @@
-# Community and Open Source Philosophy
+# Community Philosophy
 
-Go-Fi is public because transparency, learning, collaboration, and trust matter.
+Go-Fi is open source because infrastructure software should be inspectable, improvable, and teachable.
 
-The goal is to make the core platform understandable, auditable, and improvable by the community while still preserving a sustainable business model for the founder.
+## What We Want
 
-## What the project values
+- practical contributions
+- high-trust collaboration
+- clear, auditable code
+- real-world usefulness for connectivity businesses
+- respectful community participation
 
-- practical software over hype
-- clarity over unnecessary complexity
-- real-world usefulness in mobile-money-first markets
-- openness with sustainable boundaries
+## What We Also Protect
 
-## Why not fully unrestricted open source
+- sustainable founder economics
+- long-term maintenance capacity
+- project identity and brand integrity
+- the ability to offer official hosted and commercial versions
 
-Go-Fi is intended to power real commercial operations. That means the project must remain sustainable for the people building and maintaining it.
+## In Short
 
-The open-core approach tries to balance:
-
-- community collaboration
-- public visibility of the core
-- protection from zero-contribution commercial cloning
-- room for hosted services, support, and premium offerings
+We welcome contribution and transparency, while intentionally protecting the project's business future.
+This is an open-core project, not a public-domain giveaway.

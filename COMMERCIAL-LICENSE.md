@@ -1,77 +1,59 @@
-# Commercial License Summary
-
-This file is a practical summary for prospective commercial users. It is **not legal advice** and should be paired with a formal signed agreement when used in real business.
+# Commercial License
 
 ## Purpose
 
-Go-Fi is open-source at the core, but some commercial use cases require a separate license from the copyright holder.
+Go-Fi is released as open-source core software under AGPL-3.0.  
+A separate commercial license is available for organizations that need to use the software in ways
+that are not compatible with AGPL obligations.
 
-A commercial license is intended for organizations that want to:
+## Typical cases requiring a commercial license
 
-- run Go-Fi as a proprietary hosted product
-- distribute private forks without AGPL obligations
-- embed Go-Fi into commercial products or bundles
-- use Go-Fi in white-label form
-- receive contractual support, warranties, or custom development
-- use the Go-Fi trademarks or official brand assets commercially
+A commercial license is generally required for:
+- proprietary or closed-source deployments
+- white-label versions
+- commercial SaaS offerings that do not want to disclose source modifications
+- OEM embedding or resale in a proprietary appliance
+- enterprise redistribution under private terms
+- commercial use of protected Go-Fi branding beyond the trademark policy
 
-## When you need a commercial license
+## What a commercial license may include
 
-You should request a commercial license if you want any of the following:
-
-1. **Closed-source deployment** of a modified or extended version of Go-Fi.
-2. **SaaS or hosted resale** without sharing the corresponding source code under AGPL.
-3. **White-label resale** or rebranding support under a negotiated commercial arrangement.
-4. **Enterprise support** with private features, service-level commitments, or indemnity discussions.
-5. **Commercial use of trademarks**, logos, screenshots, or official brand identity.
-
-## Example commercial rights that may be granted
-
-A commercial agreement may include some or all of the following:
-
-- non-exclusive right to deploy proprietary versions
-- private internal modifications without public source release
+Depending on agreement, a commercial license may include:
+- right to use Go-Fi without AGPL source-sharing obligations
+- deployment rights for internal or customer-facing systems
+- permission for private modifications
 - white-label rights
-- redistribution rights to subsidiaries or customers
-- support and maintenance window
-- upgrade path for future premium modules
-- custom integration or managed hosting
+- premium modules
+- support and maintenance
+- implementation and customization services
 
-## Example restrictions that may still apply
+## Example commercial terms
 
-Even under a commercial agreement, the following may still be restricted unless explicitly granted:
+These are examples only and not a binding offer:
 
-- transfer of license to third parties
-- sublicensing beyond named entities
-- resale of source code itself
-- reuse of official marks beyond the agreed scope
-- reverse engineering of separately licensed premium modules
+- **Starter Commercial License**
+  - closed-source internal/company use
+  - limited deployment scope
+  - no trademark rights
+  - email support optional
 
-## Example pricing structure ideas
+- **SaaS / White-Label License**
+  - hosted service rights
+  - private forks permitted under contract
+  - custom branding rights if specifically granted
+  - premium modules optional
 
-These are only suggested starting points and should be negotiated case by case:
+- **Enterprise License**
+  - negotiated deployment scale
+  - support SLA
+  - custom legal/compliance terms
+  - onboarding and consulting
 
-### 1. Self-hosted commercial license
-- annual fee per company or deployment
-- optional add-on for support
+## Contact
 
-### 2. White-label license
-- higher annual fee
-- optional setup/customization package
-
-### 3. Managed deployment license
-- one-time setup fee
-- monthly support/maintenance fee
-
-### 4. Enterprise agreement
-- custom pricing
-- custom SLA
-- onboarding and migration support
-
-## Suggested commercial wording
-
-> Go-Fi core is available under AGPL-3.0 for open-source use. Organizations that require closed-source deployment, proprietary SaaS operation, white-label rights, or commercial trademark usage must obtain a separate commercial license from the copyright holder.
-
-## Contact path
-
-For commercial licensing, support, or managed deployment, contact the project owner through the official business channel listed in the repository profile or organization page.
+For commercial licensing, support, or white-label discussions, contact the project owner and describe:
+- company or project name
+- intended use
+- deployment model
+- scale
+- whether white-labeling is needed

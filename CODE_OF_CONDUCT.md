@@ -1,36 +1,41 @@
-# Code of Conduct
+# Contributor Covenant Code of Conduct
 
-## Our pledge
+## Our Pledge
 
-We want Go-Fi to be a respectful, practical, and welcoming project for contributors, users, and maintainers.
+We pledge to make participation in our community a harassment-free experience for everyone,
+regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics,
+gender identity and expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-Participants are expected to act professionally and constructively.
+## Our Standards
 
-## Expected behavior
+Examples of behavior that contributes to a positive environment:
+- showing empathy and kindness
+- being respectful of differing opinions
+- giving and gracefully accepting constructive feedback
+- focusing on what is best for the community
 
-- be respectful
-- be patient
-- give actionable feedback
-- assume good intent before escalating
-- focus criticism on ideas and implementation, not people
+Examples of unacceptable behavior:
+- harassment or insulting language
+- personal or political attacks
+- public or private harassment
+- publishing others' private information without permission
+- other conduct that could reasonably be considered inappropriate
 
-## Unacceptable behavior
+## Enforcement Responsibilities
 
-- harassment or intimidation
-- discrimination or hateful language
-- doxxing or privacy violations
-- repeated bad-faith disruption
-- abusive or insulting conduct
-- deliberate sabotage of discussion or contribution flow
+Project maintainers are responsible for clarifying and enforcing standards of acceptable behavior
+and may take appropriate corrective action.
 
 ## Scope
 
-This code of conduct applies to repository discussions, issues, pull requests, community chats, and related project spaces.
+This Code of Conduct applies within all community spaces and when an individual is officially
+representing the project.
 
 ## Enforcement
 
-Maintainers may edit, remove, or reject content that violates this code of conduct. Repeated or severe violations may result in warnings, temporary restrictions, or permanent bans.
+To report unacceptable behavior, contact the project maintainer privately.
 
-## Reporting
+## Attribution
 
-Report serious conduct issues privately to the maintainer through the official contact path associated with the project.
+This Code of Conduct is adapted from the Contributor Covenant, version 2.1.

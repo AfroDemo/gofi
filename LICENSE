@@ -1,27 +1,18 @@
-Go-Fi Core License Notice
+Go-Fi (WRMS v2)
+Copyright (C) 2026 Hasani Mkindi
 
-Copyright (c) 2026 Hasani Mkindi
+This program is intended to be licensed under the GNU Affero General Public License, version 3.
 
-The Go-Fi core project is intended to be licensed under the GNU Affero General Public License, version 3 (AGPL-3.0).
+IMPORTANT:
+This repository currently includes this project notice as a placeholder to help structure the repository.
+Before official publication or commercial/legal distribution, replace this file with the full official
+GNU AGPL v3 license text.
 
-SPDX-License-Identifier: AGPL-3.0-only
+Summary of intended terms:
+- You may use, study, modify, and redistribute this software under AGPL-3.0.
+- If you modify the software and make it available for use over a network, you must also make the
+  complete corresponding source code of your modified version available under AGPL-3.0.
+- This project name, logo, and branding are NOT licensed under AGPL-3.0. See TRADEMARK_POLICY.md.
+- Commercial licensing may also be available under separate agreement. See COMMERCIAL-LICENSE.md.
 
-Important:
-This repository file is a project-ready placeholder notice for AGPL-based distribution.
-Before publishing a production repository, replace this file with the full official text of the GNU Affero General Public License version 3.
-
-Recommended repository setup:
-1. Keep this project's core code under AGPL-3.0.
-2. Keep proprietary premium modules outside the AGPL-covered core repository.
-3. Use a separate commercial agreement for customers who need closed-source, white-label, or enterprise rights.
-4. Keep brand assets governed separately by `TRADEMARK_POLICY.md`.
-
-Additional terms:
-- The Go-Fi name, logo, and official branding are not licensed under AGPL.
-- Commercial trademark use requires separate written permission.
-- Premium modules, hosted services, paid support, and commercial deployment rights may be offered under separate agreements.
-
-See also:
-- COMMERCIAL-LICENSE.md
-- TRADEMARK_POLICY.md
-- DISCLAIMER.md
+No warranty is provided. See DISCLAIMER.md.

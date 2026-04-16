@@ -1,46 +1,43 @@
-# Future Premium Modules
+# Planned Premium Modules
 
-This document lists examples of features that can remain outside the public core repository in an open-core strategy.
+These are examples of features that may be offered outside the open-source core in the future.
 
-## Good premium candidates
+## Candidate Premium Modules
 
-### Enterprise analytics
-- advanced revenue dashboards
-- multi-branch forecasting
+### Advanced Analytics
+- deeper financial reporting
+- predictive trends
 - anomaly detection
-- deep export/reporting packs
+- branch profitability analysis
 
-### White-label toolkit
-- branding overrides
-- customer-specific themes
-- custom domain/self-service branding
-- reseller-branded onboarding flows
+### White-Label System
+- tenant-specific branding packs
+- custom domains
+- reseller-branded captive portals
+- branding management tools
 
-### Advanced payment packs
-- multi-country payment adapters
+### Enterprise Operations
+- advanced audit center
+- SLA tooling
+- corporate hierarchy support
+- advanced payout workflows
+
+### Expanded Payment Packs
+- multi-country gateway bundles
+- premium payment adapters
 - enterprise reconciliation tools
-- advanced settlement workflows
 
-### Operational automation
-- smart payout scheduling
-- automated reseller settlements
-- advanced fraud/risk rules
-- bulk branch provisioning
+### Network Add-ons
+- advanced router integrations
+- device telemetry dashboards
+- remote diagnostics
 
-### Integrations
-- premium router integrations
-- ERP/accounting integrations
-- SMS/notification enterprise connectors
-- external BI connectors
+### AI / Smart Insights
+- demand forecasting
+- pricing recommendations
+- suspicious-activity insights
 
-### Support-grade utilities
-- migration tools
-- health monitoring dashboard
-- backup/restore management UI
-- enterprise compliance reporting
+## Rule of Thumb
 
-## Premium design rule
-
-A premium module should add strong business value without making the open core unusable.
-
-The public core should remain fully capable for real deployments, but premium offerings should improve convenience, scale, analytics, automation, and enterprise readiness.
+Keep the open-source core strong enough to be respected and useful.
+Keep premium modules valuable enough that serious businesses prefer the official product ecosystem.

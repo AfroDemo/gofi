@@ -2,94 +2,63 @@
 
 Thanks for your interest in contributing.
 
-Go-Fi is an open-core project. Contributions are welcome, but they should strengthen the public core instead of pushing the repo toward unmaintainable complexity.
+## Ground Rules
 
-## Before you start
+- Be respectful and constructive.
+- Keep pull requests focused.
+- Open an issue first for major changes.
+- Do not submit code you do not have the right to contribute.
 
-Please:
+## How to Contribute
 
-1. Read the README and project docs.
-2. Check whether an issue already exists.
-3. Open an issue before starting large features.
-4. Keep pull requests focused.
-
-## What kinds of contributions are welcome
-
-- bug fixes
-- tests
-- developer experience improvements
-- documentation improvements
-- performance improvements with evidence
-- accessibility and usability improvements
-- maintainable feature additions aligned with the roadmap
-
-## What is less likely to be accepted
-
-- breaking architectural rewrites without justification
-- large dependency additions for small problems
-- branding changes
-- unrelated experimental features
-- features that belong in future premium/commercial modules
-
-## Development expectations
-
-- write clear code
-- prefer small, reviewable pull requests
-- respect existing conventions
-- include tests for important behavior changes
-- update documentation when behavior changes
-
-## Coding standards
-
-### Backend
-- follow Laravel conventions
-- keep controllers thin
-- use form requests for validation
-- keep business logic out of views
-- write migrations that are clean and reversible
-
-### Frontend
-- keep React components readable and composable
-- avoid giant page files when smaller components make sense
-- preserve accessibility and responsiveness
-
-### General
-- use descriptive naming
-- avoid dead code
-- avoid introducing silent security risks
-
-## Branch and PR guidance
-
-- create a feature branch from the default branch
-- use a descriptive branch name
-- open a pull request with:
-  - problem summary
-  - approach taken
-  - screenshots for UI changes
-  - test notes
-
-## Commit style
-
-Simple and clear commit messages are preferred, for example:
-
-- `feat: add voucher batch generation`
-- `fix: prevent duplicate payment callback allocation`
-- `docs: clarify commercial licensing note`
-
-## Reporting issues
-
-When opening an issue, include:
-
+### Reporting Bugs
+Please include:
+- clear title and summary
+- steps to reproduce
 - expected behavior
 - actual behavior
-- steps to reproduce
-- environment details if relevant
-- screenshots/logs if helpful
+- screenshots/logs where helpful
+- environment details
 
-## Security issues
+### Suggesting Features
+Please include:
+- problem being solved
+- proposed solution
+- alternatives considered
+- any possible impact on security, tenancy, or finance
 
-Do not open public issues for security vulnerabilities. Follow `SECURITY.md`.
+### Pull Requests
+Before opening a PR:
+- run tests
+- keep coding style consistent with the project
+- document behavior changes
+- avoid mixing unrelated changes
 
-## Licensing note for contributors
+## Coding Standards
 
-By contributing to this repository, you agree that your contributions may be distributed under the project’s open-source license and may also be used by the project owner in commercially licensed distributions of the project.
+- Keep controllers thin.
+- Prefer readable code over clever code.
+- Respect tenant boundaries and authorization rules.
+- Financial logic must remain auditable.
+- Do not introduce breaking schema changes casually.
+- Add tests for business-critical paths.
+
+## Commit Guidance
+
+Good commits:
+- `feat: add voucher redemption flow`
+- `fix: prevent duplicate payment callback allocations`
+- `docs: clarify AGPL and trademark policy`
+
+## Areas That Need Extra Care
+
+- payment callback processing
+- revenue allocation logic
+- tenant scoping
+- session activation and expiry
+- authorization
+
+## License of Contributions
+
+By contributing, you agree that your contributions may be distributed under the repository license
+and, where applicable, included in future dual-licensed or commercially licensed versions of the project.

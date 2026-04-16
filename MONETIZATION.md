@@ -1,89 +1,58 @@
 # Monetization Strategy
 
-This document explains how Go-Fi can remain open while still being economically favorable to the founder.
+Go-Fi follows an **open-core** strategy.
 
-## Core model: open core
+## Goals
 
-The recommended model is:
+- keep the core useful and transparent
+- build trust through open source
+- preserve a durable business model for the founder
+- avoid giving away all economic leverage
 
-- **Open core** for community adoption and trust
-- **Commercial path** for organizations needing proprietary or enterprise use
-- **Brand control** to protect the official product identity
-
-## Main revenue paths
+## Revenue Streams
 
 ### 1. Hosted SaaS
-Offer an official hosted version of Go-Fi.
+The strongest long-term model:
+- founder-hosted platform
+- recurring subscription or revenue-share model
+- managed updates and support
 
-Best for:
-- hotspot operators who do not want self-hosting
-- resellers who want updates and support
-- operators who want quick onboarding
-
-Advantages:
-- recurring revenue
-- stronger customer lock-in through convenience and support
-- faster product feedback loop
-
-### 2. Managed deployment
-Provide setup and deployment services for:
+### 2. Managed Deployments
+Offer setup and customization for:
 - hotels
 - cafés
-- local ISPs
-- hotspot operators
-- community WiFi providers
+- schools
+- community networks
+- small ISPs
 
-Typical revenue:
-- setup fee
-- customization fee
-- maintenance fee
-
-### 3. Commercial licensing
-Sell commercial licenses for:
-- closed-source deployments
-- white-label rights
+### 3. Commercial Licensing
+For:
+- closed-source companies
+- white-label deployments
+- enterprise customers
 - private forks
-- enterprise rollout
 
-### 4. Support and consulting
-Offer:
-- architecture support
-- integration help
-- payment gateway setup
-- hotspot/router onboarding
-- performance tuning
+### 4. Premium Modules
+Keep some advanced modules outside the open-source core.
 
-### 5. Premium modules
-Keep selected advanced modules outside the public core repo.
-Examples are listed in `PREMIUM_MODULES.md`.
+### 5. Support and Consulting
+Paid services:
+- onboarding
+- migration
+- infrastructure setup
+- payment integration
+- router integration
+- custom reporting
 
-## Why this model is favorable
+## Why AGPL Helps
 
-This approach helps the founder because:
+AGPL discourages competitors from taking the code, running a modified hosted version, and keeping their changes private.
+It does not fully eliminate competition, but it improves founder leverage compared with permissive licenses.
 
-- the public repo attracts contributors and trust
-- AGPL reduces silent proprietary SaaS competition around the core
-- brand restrictions keep the official identity valuable
-- premium modules preserve future upsell paths
-- managed hosting/support creates recurring income
+## Practical Founder Advice
 
-## What not to give away too early
-
-Avoid open-sourcing every strategic advantage from day one.
-In particular, be careful with:
-
-- advanced analytics
-- enterprise reporting
-- white-label tooling
-- premium integrations
-- operational automation that customers will pay for
-
-## Founder advantage checklist
-
-To stay in a strong commercial position:
-
-- keep the public core useful but not exhaustive
-- own the official hosted experience
-- own the official brand
-- keep commercial contracts simple
-- document boundaries between open and premium clearly
+- protect the brand
+- own the hosted experience
+- own premium modules
+- own implementation expertise
+- avoid publishing everything as free differentiators

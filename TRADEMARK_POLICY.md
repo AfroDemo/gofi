@@ -1,41 +1,40 @@
 # Trademark and Brand Policy
 
-## Ownership
+## Brand Ownership
 
-The names **Go-Fi**, related brand names, official logos, official banners, and other official brand assets are proprietary brand assets of the project owner unless explicitly stated otherwise.
+The names **Go-Fi**, related logos, and any official project branding are reserved by the project owner
+unless explicitly stated otherwise.
 
-The open-source code license does **not** grant trademark rights.
+## What the Open-Source License Does Not Cover
 
-## What is allowed
+The software license does **not** grant rights to:
+- use the Go-Fi name for a competing hosted product
+- use the official logo in commercial forks or derivative services
+- imply endorsement, partnership, or official status
+- market a modified fork as the original project
 
-Without separate written permission, you may:
+## Permitted Uses
 
-- refer to the project truthfully by name to discuss the original software
-- state that your fork is “based on Go-Fi” or “forked from Go-Fi”
-- use unmodified project names in factual comparisons, bug reports, and compatibility references
+You may generally:
+- refer to the project by name when discussing it factually
+- state that your software is "based on" or "derived from" Go-Fi
+- use the name in comparative or nominative references
 
-## What is not allowed without permission
+## Restricted Uses
 
-You may not:
-
-- market your fork or service as the official Go-Fi product
-- use Go-Fi logos or banners to promote your own commercial offering
-- imply endorsement, partnership, sponsorship, or certification
-- use confusingly similar branding for competing hosted offerings
-- reuse official screenshots or visual assets in a misleading way
+You may not, without permission:
+- launch a hosted service using the Go-Fi name
+- reuse the logo in a commercial deployment
+- present a fork as official
+- use confusingly similar branding
 
 ## Forks
 
-Forks are allowed under the project’s code license, but public forks that are redistributed or offered as services should:
+If you fork the project and redistribute or deploy it publicly, you should:
+- rename the project
+- remove official logos and brand assets
+- clearly state that your version is an independent fork
 
-- use a distinct product name
-- remove or replace official logos and brand assets
-- avoid confusing users into thinking they are using the official Go-Fi project
+## Permission Requests
 
-## Commercial brand use
-
-Any commercial use of Go-Fi marks, logos, banners, or official design assets requires separate written permission.
-
-## Reservation of rights
-
-All trademark and brand rights not expressly granted are reserved.
+For trademark, logo, partnership, or official branding requests, contact the project owner.
