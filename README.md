@@ -21,6 +21,39 @@ This is not just a hotspot system — it’s a **full business platform for inte
 
 ---
 
+## Open Source Philosophy
+
+Go-Fi is intended to be public, useful, and contributor-friendly without giving away the business model. The source code should help operators, developers, and learners understand how a modern hotspot billing platform works in practice.
+
+The project is open for community benefit, transparency, and learning. Contributors can improve the core platform, fix bugs, add quality-of-life features, and help make the base product stronger for everyone.
+
+The commercial strategy remains separate from the public core. That means the source is open, but the brand, hosted service, premium modules, and enterprise usage rights are controlled deliberately so the project can stay sustainable.
+
+---
+
+## Commercial Usage
+
+Go-Fi is planned as an AGPL-licensed open-source core with a commercial licensing path for companies that want to use it without open-sourcing their own modified deployments.
+
+If you run Go-Fi as a SaaS, modify it and expose it over a network, or use it in a white-label enterprise deployment, you must comply with the AGPL terms or obtain a commercial license.
+
+For commercial licensing, white-label usage, enterprise deployment, or support inquiries, contact the project owner at: `hasanimkindi@gmail.com`
+
+Reference documents:
+
+* [Repository Structure](docs/open-source/REPO_STRUCTURE.md)
+* [License Strategy](docs/open-source/LICENSE_STRATEGY.md)
+* [Dual License Plan](docs/open-source/DUAL_LICENSE_PLAN.md)
+* [Trademark Policy](docs/open-source/TRADEMARK_POLICY.md)
+* [Monetization Strategy](docs/open-source/MONETIZATION_STRATEGY.md)
+* [Future Premium Strategy](docs/open-source/FUTURE_PREMIUM_STRATEGY.md)
+* [Contributing](CONTRIBUTING.md)
+* [Code of Conduct](CODE_OF_CONDUCT.md)
+* [Security Policy](SECURITY.md)
+* [Disclaimer](DISCLAIMER.md)
+
+---
+
 ## ✨ Key Features
 
 ### 🧩 Multi-Tenant Architecture
@@ -149,21 +182,27 @@ When a user connects to a hotspot:
 ## 📁 Project Structure (High-Level)
 
 ```
-app/
- ├── Models/
- ├── Actions/
- ├── Services/
- ├── Policies/
- ├── Http/
-resources/
- ├── js/ (React + Inertia)
-database/
- ├── migrations/
- ├── seeders/
-routes/
- ├── web.php
- ├── api.php
+core/
+ ├── app/
+ ├── resources/
+ ├── routes/
+ ├── database/
+modules/
+ ├── premium/
+ ├── integrations/
+ ├── enterprise/
+docs/
+ ├── open-source/
+ ├── product/
+ ├── policies/
 ```
+
+### How the split works later
+
+* `core/` holds the open-source AGPL platform that remains usable by the community.
+* `modules/` holds optional add-ons, commercial packs, or future enterprise-only features.
+* `docs/` holds policies, strategy, product notes, and contributor guidance.
+* Keep premium code isolated so the public core remains valuable, but not the full monetization package.
 
 ---
 
@@ -244,6 +283,8 @@ Seeder includes:
 * [ ] Mobile app
 * [ ] White-label support
 
+Public roadmap details are tracked in [docs/open-source/ROADMAP.md](docs/open-source/ROADMAP.md), and release readiness is covered in [docs/open-source/RELEASE_CHECKLIST.md](docs/open-source/RELEASE_CHECKLIST.md).
+
 ---
 
 ## 🌍 Target Market
@@ -258,6 +299,8 @@ Seeder includes:
 ---
 
 ## 💡 Vision
+
+The goal is to build the strongest practical open-core hotspot billing platform in the market: one that earns through hosting, support, and premium modules while still giving the community a useful foundation to build on.
 
 To become the **default platform for internet reselling in emerging markets**, enabling:
 
@@ -279,7 +322,7 @@ Contributions are welcome.
 
 ## 📜 License
 
-MIT License
+AGPL-3.0-only for the open-source core. See [LICENSE](LICENSE) and [docs/open-source/LICENSE_STRATEGY.md](docs/open-source/LICENSE_STRATEGY.md).
 
 ---
 

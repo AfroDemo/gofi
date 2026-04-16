@@ -1,0 +1,15 @@
+Go-Fi Open Source Core
+
+Copyright (c) 2026 AfroDemo
+
+This project is licensed under the GNU Affero General Public License, version 3, only (AGPL-3.0-only).
+
+You may redistribute and/or modify this software under the terms of the AGPL-3.0-only.
+
+This repository includes a separate commercial licensing strategy for organizations that want to use Go-Fi without the AGPL source-sharing obligations.
+
+For the full license text, see:
+https://www.gnu.org/licenses/agpl-3.0.en.html
+
+For project-specific licensing guidance, see:
+[docs/open-source/LICENSE_STRATEGY.md](docs/open-source/LICENSE_STRATEGY.md)
