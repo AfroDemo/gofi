@@ -146,6 +146,7 @@ npm run dev
 - [x] revenue sharing
 
 ### Next
+- [x] dual payment gateway fallback orchestration (Palmpesa <-> Snippe)
 - [ ] real payment gateway integration
 - [ ] router integration
 - [ ] advanced reporting
