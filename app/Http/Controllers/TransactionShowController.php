@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TransactionStatus;
 use App\Http\Controllers\Concerns\ResolvesWorkspaceScope;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -33,6 +34,10 @@ class TransactionShowController extends Controller
                 'ledgerEntries:id,tenant_id,transaction_id,direction,entry_type,amount,currency,balance_after,description,posted_at',
             ])
             ->findOrFail($transaction->id);
+        $paymentMetadata = is_array($transaction->metadata) ? ($transaction->metadata['payment'] ?? []) : [];
+        $pendingAgeMinutes = $transaction->status === TransactionStatus::Pending
+            ? (int) ceil($transaction->created_at?->diffInSeconds(now()) / 60)
+            : null;
 
         return Inertia::render('operations/transaction-show', [
             'viewer' => $scope['viewer'],
@@ -56,6 +61,27 @@ class TransactionShowController extends Controller
                 'paid_at' => $transaction->paid_at?->toIso8601String(),
                 'created_at' => $transaction->created_at?->toIso8601String(),
                 'metadata' => $transaction->metadata,
+                'pending_age_minutes' => $pendingAgeMinutes,
+                'payment' => [
+                    'gateway' => data_get($paymentMetadata, 'gateway'),
+                    'message' => data_get($paymentMetadata, 'message'),
+                    'provider_reference' => $transaction->provider_reference,
+                    'using_fallback' => (bool) data_get($paymentMetadata, 'selection.using_fallback', false),
+                    'last_poll' => [
+                        'gateway' => data_get($paymentMetadata, 'last_poll.gateway'),
+                        'status' => data_get($paymentMetadata, 'last_poll.status'),
+                        'checked_at' => data_get($paymentMetadata, 'last_poll.checked_at'),
+                    ],
+                    'attempts' => collect(data_get($paymentMetadata, 'attempts', []))
+                        ->map(fn ($attempt) => [
+                            'gateway' => data_get($attempt, 'gateway'),
+                            'success' => (bool) data_get($attempt, 'success', false),
+                            'message' => data_get($attempt, 'message'),
+                        ])
+                        ->values()
+                        ->all(),
+                    'can_check_status' => $transaction->status === TransactionStatus::Pending && filled($transaction->provider_reference),
+                ],
                 'revenue_rule' => $transaction->revenueShareRule ? [
                     'name' => $transaction->revenueShareRule->name,
                     'model' => $transaction->revenueShareRule->model->value,

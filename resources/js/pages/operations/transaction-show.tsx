@@ -1,12 +1,14 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { OpsPageHeader } from '@/components/ops/ops-page-header';
 import { OpsStatCard } from '@/components/ops/ops-stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { formatDataLimit, formatDateTime, formatMoney } from '@/lib/formatters';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, BadgeDollarSign, DatabaseZap, HandCoins, Landmark, ReceiptText } from 'lucide-react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ArrowLeft, BadgeDollarSign, CircleAlert, DatabaseZap, HandCoins, Landmark, ReceiptText, RotateCcw } from 'lucide-react';
 
 interface Viewer {
     scope: 'platform' | 'tenant';
@@ -84,7 +86,25 @@ interface TransactionDetail {
     confirmed_at: string | null;
     paid_at: string | null;
     created_at: string | null;
+    pending_age_minutes: number | null;
     metadata: Record<string, unknown> | null;
+    payment: {
+        gateway: string | null;
+        message: string | null;
+        provider_reference: string | null;
+        using_fallback: boolean;
+        last_poll: {
+            gateway: string | null;
+            status: string | null;
+            checked_at: string | null;
+        };
+        attempts: Array<{
+            gateway: string | null;
+            success: boolean;
+            message: string | null;
+        }>;
+        can_check_status: boolean;
+    };
     revenue_rule: RevenueRule | null;
     allocation: Allocation | null;
     callbacks: CallbackRow[];
@@ -107,9 +127,12 @@ const tone: Record<string, string> = {
     manual: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
     active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
     expired: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
+    failed_payment: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+    successful_payment: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
 };
 
 export default function TransactionShow({ viewer, transaction }: TransactionShowProps) {
+    const { flash } = usePage<SharedData>().props;
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Transactions', href: '/transactions' },
@@ -120,6 +143,22 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={transaction.reference} />
             <div className="flex flex-1 flex-col gap-6 rounded-xl p-4">
+                {flash?.success && (
+                    <Alert className="border-emerald-500/25 bg-emerald-500/8 text-emerald-900 dark:text-emerald-100">
+                        <CircleAlert className="size-4" />
+                        <AlertTitle>Transaction updated</AlertTitle>
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <CircleAlert className="size-4" />
+                        <AlertTitle>Refresh issue</AlertTitle>
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+
                 <div className="flex justify-start">
                     <Link
                         href={route('transactions.index')}
@@ -183,7 +222,26 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
                                 <Badge variant="outline" className={tone[transaction.status] ?? ''}>
                                     {transaction.status}
                                 </Badge>
+                                {transaction.pending_age_minutes && (
+                                    <Badge variant="outline" className={tone.pending}>
+                                        pending {transaction.pending_age_minutes} min
+                                    </Badge>
+                                )}
                             </div>
+
+                            {transaction.payment.can_check_status && (
+                                <div className="flex justify-start">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl"
+                                        onClick={() => router.post(route('transactions.refresh-status', transaction.id))}
+                                    >
+                                        <RotateCcw className="size-4" />
+                                        Re-check payment status
+                                    </Button>
+                                </div>
+                            )}
 
                             <div className="grid gap-3 md:grid-cols-2">
                                 {[
@@ -208,6 +266,78 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
                         </CardContent>
                     </Card>
 
+                    <Card className="border-border/70">
+                        <CardHeader>
+                            <CardTitle>Payment diagnostics</CardTitle>
+                            <CardDescription>Gateway context for pending, failed, or delayed payment troubleshooting.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                    <p className="text-muted-foreground text-xs uppercase">Gateway</p>
+                                    <p className="mt-2 font-medium">{transaction.payment.gateway || 'Not recorded'}</p>
+                                </div>
+                                <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                    <p className="text-muted-foreground text-xs uppercase">Provider reference</p>
+                                    <p className="mt-2 font-medium">{transaction.payment.provider_reference || 'Not available'}</p>
+                                </div>
+                                <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                    <p className="text-muted-foreground text-xs uppercase">Last status check</p>
+                                    <p className="mt-2 font-medium">{formatDateTime(transaction.payment.last_poll.checked_at)}</p>
+                                </div>
+                                <div className="bg-muted/45 rounded-xl px-3 py-3">
+                                    <p className="text-muted-foreground text-xs uppercase">Last polled status</p>
+                                    <p className="mt-2 font-medium">{transaction.payment.last_poll.status || 'Not checked yet'}</p>
+                                </div>
+                            </div>
+
+                            <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                <p className="font-medium">Operator guidance</p>
+                                <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                    {transaction.status === 'pending'
+                                        ? transaction.pending_age_minutes && transaction.pending_age_minutes >= 5
+                                            ? 'This payment has been pending for several minutes. Re-check status, verify the customer number, and inspect the callback timeline below.'
+                                            : 'This payment is still pending. Re-check status if the customer says they already approved the prompt.'
+                                        : transaction.status === 'successful'
+                                          ? 'Payment is confirmed. Use the fulfilment and ledger sections below to verify access and tenant accounting.'
+                                          : 'This payment did not complete. Review gateway attempts and callback evidence before asking the customer to retry.'}
+                                </p>
+                            </div>
+
+                            {transaction.payment.message && (
+                                <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                    <p className="font-medium">Gateway message</p>
+                                    <p className="text-muted-foreground mt-2 text-sm leading-6">{transaction.payment.message}</p>
+                                </div>
+                            )}
+
+                            {transaction.payment.attempts.length > 0 ? (
+                                <div className="border-border/60 rounded-2xl border px-4 py-4">
+                                    <p className="font-medium">Gateway attempts</p>
+                                    <div className="mt-4 space-y-3">
+                                        {transaction.payment.attempts.map((attempt, index) => (
+                                            <div key={`${attempt.gateway}-${index}`} className="bg-muted/45 rounded-xl px-3 py-3">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <p className="font-medium">{attempt.gateway || 'Unknown gateway'}</p>
+                                                    <Badge variant="outline" className={attempt.success ? tone.successful_payment : tone.failed_payment}>
+                                                        {attempt.success ? 'accepted' : 'failed'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-muted-foreground mt-2 text-sm">{attempt.message || 'No message recorded for this attempt.'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed px-4 py-8 text-center text-sm">
+                                    No gateway attempts were captured in metadata for this transaction.
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                     <Card className="border-border/70">
                         <CardHeader>
                             <CardTitle>Revenue rule and allocation</CardTitle>

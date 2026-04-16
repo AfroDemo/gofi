@@ -10,6 +10,7 @@ use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
 use App\Http\Controllers\TransactionIndexController;
 use App\Http\Controllers\TransactionShowController;
+use App\Http\Controllers\TransactionStatusRefreshController;
 use App\Http\Controllers\VoucherBatchController;
 use App\Http\Controllers\VoucherIndexController;
 use App\Http\Controllers\VoucherProfileManagementController;
@@ -53,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'create'])->name('voucher-batches.create');
     Route::post('voucher-profiles/{voucherProfile}/generate', [VoucherBatchController::class, 'store'])->name('voucher-batches.store');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
+    Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
 });
 
