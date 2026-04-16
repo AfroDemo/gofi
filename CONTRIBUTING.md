@@ -1,50 +1,95 @@
 # Contributing to Go-Fi
 
-Thanks for helping improve Go-Fi.
+Thanks for your interest in contributing.
 
-## How to Contribute
+Go-Fi is an open-core project. Contributions are welcome, but they should strengthen the public core instead of pushing the repo toward unmaintainable complexity.
 
-1. Fork the repository.
-2. Create a focused branch for your change.
-3. Keep your pull request small and easy to review.
-4. Add tests when you change behavior.
-5. Update documentation when the user-facing workflow changes.
+## Before you start
 
-## Coding Standards
+Please:
 
-* Follow the existing Laravel, Inertia.js, React, and Tailwind patterns already used in the repository.
-* Prefer readable, explicit code over clever abstractions.
-* Keep controllers thin and push workflow logic into actions or services when it helps clarity.
-* Add validation, authorization, and tests for business-critical paths.
-* Avoid unrelated refactors in the same pull request.
+1. Read the README and project docs.
+2. Check whether an issue already exists.
+3. Open an issue before starting large features.
+4. Keep pull requests focused.
 
-## Pull Request Rules
+## What kinds of contributions are welcome
 
-* One purpose per PR.
-* Link the issue or describe the goal clearly.
-* Explain what changed and why.
-* Include screenshots or notes for UI changes.
-* Do not merge incomplete work unless it is explicitly labeled as a draft.
+- bug fixes
+- tests
+- developer experience improvements
+- documentation improvements
+- performance improvements with evidence
+- accessibility and usability improvements
+- maintainable feature additions aligned with the roadmap
 
-## Issue Reporting
+## What is less likely to be accepted
 
-When reporting a bug, include:
+- breaking architectural rewrites without justification
+- large dependency additions for small problems
+- branding changes
+- unrelated experimental features
+- features that belong in future premium/commercial modules
 
-* what you expected to happen
-* what actually happened
-* reproduction steps
-* relevant logs, screenshots, or request payloads
-* environment details if they matter
+## Development expectations
 
-## Feature Requests
+- write clear code
+- prefer small, reviewable pull requests
+- respect existing conventions
+- include tests for important behavior changes
+- update documentation when behavior changes
 
-Feature requests are welcome, but please include:
+## Coding standards
 
-* the problem being solved
-* who benefits from it
-* why it belongs in the open-source core instead of a premium module
-* any constraints or alternatives you have considered
+### Backend
+- follow Laravel conventions
+- keep controllers thin
+- use form requests for validation
+- keep business logic out of views
+- write migrations that are clean and reversible
 
-## Contribution Boundary
+### Frontend
+- keep React components readable and composable
+- avoid giant page files when smaller components make sense
+- preserve accessibility and responsiveness
 
-Contributions to the public core are welcome. Premium modules, commercial branding assets, and private deployment packaging may be kept separate by the project owner.
+### General
+- use descriptive naming
+- avoid dead code
+- avoid introducing silent security risks
+
+## Branch and PR guidance
+
+- create a feature branch from the default branch
+- use a descriptive branch name
+- open a pull request with:
+  - problem summary
+  - approach taken
+  - screenshots for UI changes
+  - test notes
+
+## Commit style
+
+Simple and clear commit messages are preferred, for example:
+
+- `feat: add voucher batch generation`
+- `fix: prevent duplicate payment callback allocation`
+- `docs: clarify commercial licensing note`
+
+## Reporting issues
+
+When opening an issue, include:
+
+- expected behavior
+- actual behavior
+- steps to reproduce
+- environment details if relevant
+- screenshots/logs if helpful
+
+## Security issues
+
+Do not open public issues for security vulnerabilities. Follow `SECURITY.md`.
+
+## Licensing note for contributors
+
+By contributing to this repository, you agree that your contributions may be distributed under the project’s open-source license and may also be used by the project owner in commercially licensed distributions of the project.

@@ -1,15 +1,27 @@
-Go-Fi Open Source Core
+Go-Fi Core License Notice
 
-Copyright (c) 2026 AfroDemo
+Copyright (c) 2026 Hasani Mkindi
 
-This project is licensed under the GNU Affero General Public License, version 3, only (AGPL-3.0-only).
+The Go-Fi core project is intended to be licensed under the GNU Affero General Public License, version 3 (AGPL-3.0).
 
-You may redistribute and/or modify this software under the terms of the AGPL-3.0-only.
+SPDX-License-Identifier: AGPL-3.0-only
 
-This repository includes a separate commercial licensing strategy for organizations that want to use Go-Fi without the AGPL source-sharing obligations.
+Important:
+This repository file is a project-ready placeholder notice for AGPL-based distribution.
+Before publishing a production repository, replace this file with the full official text of the GNU Affero General Public License version 3.
 
-For the full license text, see:
-https://www.gnu.org/licenses/agpl-3.0.en.html
+Recommended repository setup:
+1. Keep this project's core code under AGPL-3.0.
+2. Keep proprietary premium modules outside the AGPL-covered core repository.
+3. Use a separate commercial agreement for customers who need closed-source, white-label, or enterprise rights.
+4. Keep brand assets governed separately by `TRADEMARK_POLICY.md`.
 
-For project-specific licensing guidance, see:
-[docs/open-source/LICENSE_STRATEGY.md](docs/open-source/LICENSE_STRATEGY.md)
+Additional terms:
+- The Go-Fi name, logo, and official branding are not licensed under AGPL.
+- Commercial trademark use requires separate written permission.
+- Premium modules, hosted services, paid support, and commercial deployment rights may be offered under separate agreements.
+
+See also:
+- COMMERCIAL-LICENSE.md
+- TRADEMARK_POLICY.md
+- DISCLAIMER.md

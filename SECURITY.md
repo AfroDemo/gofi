@@ -1,40 +1,44 @@
 # Security Policy
 
-## Supported Versions
+## Reporting a vulnerability
 
-Security fixes will be published for the active public core and any maintained release branches announced by the project owner.
+If you discover a security issue, please report it privately.
 
-## Reporting a Vulnerability
+Please do **not** open a public GitHub issue for a vulnerability that could put users, operators, or deployments at risk.
 
-If you discover a security issue, do not open a public issue.
+## What to include
 
-Report it privately by email to `hasanimkindi@gmail.com` or through another private channel the project owner publishes later.
+Please include as much of the following as possible:
 
-Report it privately to the project owner with:
+- affected component or area
+- description of the issue
+- impact
+- reproduction steps or proof of concept
+- suggested mitigation if known
+- version/commit details if relevant
 
-* a clear description of the vulnerability
-* steps to reproduce
-* affected URLs, routes, or components
-* any proof of concept you are comfortable sharing
-* your contact information for follow-up
+## Response expectations
 
-## Response Expectations
+The maintainer will aim to:
 
-The project will aim to:
+- acknowledge receipt in a reasonable time
+- investigate the report
+- decide whether the issue is valid and in scope
+- prepare a fix or mitigation when possible
 
-* acknowledge receipt promptly
-* triage the report and confirm severity
-* coordinate a fix or mitigation
-* notify reporters when a patch is available
+Response times may vary because this project may be maintained by a small team or solo founder.
 
-The exact timeline depends on severity and exploitability.
+## Scope examples
 
-## Disclosure Policy
+Examples of high-priority areas:
 
-We prefer coordinated disclosure. Do not publish exploit details until a fix or mitigation has been prepared, unless there is an immediate risk to users and disclosure is necessary.
+- authentication and authorization bypass
+- tenant data leakage
+- payment callback abuse
+- voucher/session activation bypass
+- remote code execution or command injection
+- sensitive secret exposure
 
-## Scope
+## Disclosure
 
-This policy covers the public Go-Fi core and any official project artifacts.
-
-For general bugs or feature requests, use the GitHub issue templates instead of reporting them here.
+Please allow reasonable time for investigation and patching before public disclosure.

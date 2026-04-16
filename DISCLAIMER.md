@@ -1,9 +1,29 @@
 # Disclaimer
 
-Go-Fi is provided for informational and operational use only.
+Go-Fi is provided on an **"as is"** and **"as available"** basis.
 
-The software is provided "as is" and "as available", without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
+To the maximum extent permitted by applicable law:
 
-The project owner and contributors are not liable for any direct, indirect, incidental, special, consequential, or exemplary damages arising from the use of this software, including loss of revenue, downtime, data loss, or business interruption.
+- no warranty is provided, express or implied
+- no guarantee is made that the software is fit for a particular purpose
+- no guarantee is made that the software is secure, error-free, or uninterrupted
+- the authors and copyright holders are not liable for damages arising from use, misuse, or inability to use the software
 
-Use this software at your own risk. You are responsible for testing, deployment, backups, monitoring, security, and compliance in your own environment.
+## Operational responsibility
+
+Anyone deploying Go-Fi is responsible for:
+
+- legal compliance in their jurisdiction
+- payment gateway compliance
+- telecom/network compliance
+- data protection obligations
+- backup, monitoring, and security hardening
+- safe integration with routers and captive portal infrastructure
+
+## No professional advice
+
+Nothing in this repository should be treated as legal, tax, telecom, accounting, or regulatory advice.
+
+## Production use
+
+Production users should perform their own review, testing, and legal checks before deployment.
