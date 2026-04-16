@@ -105,6 +105,12 @@ interface BranchShowProps {
     recent_transactions: RecentTransaction[];
     recent_sessions: RecentSession[];
     recent_incidents: RecentIncident[];
+    follow_up: {
+        assigned_at: string | null;
+        owned_by_viewer: boolean;
+        assigned_user: { name: string; email: string } | null;
+        assigned_by: { name: string; email: string } | null;
+    } | null;
     notes: FollowUpNoteRow[];
 }
 
@@ -135,6 +141,7 @@ export default function BranchShow({
     recent_transactions,
     recent_sessions,
     recent_incidents,
+    follow_up,
     notes,
 }: BranchShowProps) {
     const { flash } = usePage<SharedData>().props;
@@ -310,6 +317,9 @@ export default function BranchShow({
                     title="Operator follow-up notes"
                     description="Capture who picked this up, what was checked, and what still needs attention so branch work does not rely on memory."
                     notes={notes}
+                    followUp={follow_up}
+                    takeOwnershipHref={route('branches.follow-up.store', branch.id)}
+                    releaseOwnershipHref={route('branches.follow-up.destroy', branch.id)}
                     note={noteForm.data.note}
                     onNoteChange={(value) => noteForm.setData('note', value)}
                     onSubmit={submitNote}

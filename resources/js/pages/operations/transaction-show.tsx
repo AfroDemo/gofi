@@ -112,6 +112,12 @@ interface TransactionDetail {
     callbacks: CallbackRow[];
     sessions: SessionRow[];
     ledger_entries: LedgerRow[];
+    follow_up: {
+        assigned_at: string | null;
+        owned_by_viewer: boolean;
+        assigned_user: { name: string; email: string } | null;
+        assigned_by: { name: string; email: string } | null;
+    } | null;
     notes: FollowUpNoteRow[];
 }
 
@@ -426,6 +432,9 @@ export default function TransactionShow({ viewer, transaction }: TransactionShow
                     title="Operator follow-up notes"
                     description="Record who picked up this payment issue, what checks were done, and what the next action should be."
                     notes={transaction.notes}
+                    followUp={transaction.follow_up}
+                    takeOwnershipHref={route('transactions.follow-up.store', transaction.id)}
+                    releaseOwnershipHref={route('transactions.follow-up.destroy', transaction.id)}
                     note={noteForm.data.note}
                     onNoteChange={(value) => noteForm.setData('note', value)}
                     onSubmit={submitNote}

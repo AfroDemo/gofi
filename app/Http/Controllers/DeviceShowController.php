@@ -33,6 +33,9 @@ class DeviceShowController extends Controller
                 'incidents:id,tenant_id,branch_id,hotspot_device_id,reported_by_user_id,resolved_by_user_id,title,details,severity,status,opened_at,resolved_at,resolution_notes',
                 'incidents.reporter:id,name,email',
                 'incidents.resolver:id,name,email',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp.assignedUser:id,name,email',
+                'operatorFollowUp.assignedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -148,6 +151,18 @@ class DeviceShowController extends Controller
                     ] : null,
                     'can_resolve' => $incident->status === DeviceIncidentStatus::Open,
                 ])->all(),
+            'follow_up' => $device->operatorFollowUp ? [
+                'assigned_at' => $device->operatorFollowUp->assigned_at?->toIso8601String(),
+                'owned_by_viewer' => $device->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                'assigned_user' => $device->operatorFollowUp->assignedUser ? [
+                    'name' => $device->operatorFollowUp->assignedUser->name,
+                    'email' => $device->operatorFollowUp->assignedUser->email,
+                ] : null,
+                'assigned_by' => $device->operatorFollowUp->assignedBy ? [
+                    'name' => $device->operatorFollowUp->assignedBy->name,
+                    'email' => $device->operatorFollowUp->assignedBy->email,
+                ] : null,
+            ] : null,
             'notes' => $device->operatorNotes
                 ->sortByDesc('created_at')
                 ->values()

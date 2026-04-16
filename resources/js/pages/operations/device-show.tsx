@@ -108,6 +108,12 @@ interface DeviceShowProps {
     recent_transactions: RecentTransaction[];
     incident_options: IncidentOption[];
     incidents: IncidentRow[];
+    follow_up: {
+        assigned_at: string | null;
+        owned_by_viewer: boolean;
+        assigned_user: { name: string; email: string } | null;
+        assigned_by: { name: string; email: string } | null;
+    } | null;
     notes: FollowUpNoteRow[];
 }
 
@@ -168,6 +174,7 @@ export default function DeviceShow({
     recent_transactions,
     incident_options,
     incidents,
+    follow_up,
     notes,
 }: DeviceShowProps) {
     const { flash } = usePage<SharedData>().props;
@@ -354,6 +361,9 @@ export default function DeviceShow({
                     title="Operator follow-up notes"
                     description="Keep a running investigation trail here so hardware follow-up survives shift changes and handoffs."
                     notes={notes}
+                    followUp={follow_up}
+                    takeOwnershipHref={route('devices.follow-up.store', device.id)}
+                    releaseOwnershipHref={route('devices.follow-up.destroy', device.id)}
                     note={noteForm.data.note}
                     onNoteChange={(value) => noteForm.setData('note', value)}
                     onSubmit={submitNote}

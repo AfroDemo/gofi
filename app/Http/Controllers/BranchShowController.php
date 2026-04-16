@@ -32,6 +32,9 @@ class BranchShowController extends Controller
                 'manager:id,name,email',
                 'statusEvents:id,tenant_id,branch_id,changed_by_user_id,from_status,to_status,reason,created_at',
                 'statusEvents.actor:id,name,email',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp.assignedUser:id,name,email',
+                'operatorFollowUp.assignedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -138,6 +141,18 @@ class BranchShowController extends Controller
                 'opened_at' => $incident->opened_at?->toIso8601String(),
                 'resolved_at' => $incident->resolved_at?->toIso8601String(),
             ])->values(),
+            'follow_up' => $branch->operatorFollowUp ? [
+                'assigned_at' => $branch->operatorFollowUp->assigned_at?->toIso8601String(),
+                'owned_by_viewer' => $branch->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                'assigned_user' => $branch->operatorFollowUp->assignedUser ? [
+                    'name' => $branch->operatorFollowUp->assignedUser->name,
+                    'email' => $branch->operatorFollowUp->assignedUser->email,
+                ] : null,
+                'assigned_by' => $branch->operatorFollowUp->assignedBy ? [
+                    'name' => $branch->operatorFollowUp->assignedBy->name,
+                    'email' => $branch->operatorFollowUp->assignedBy->email,
+                ] : null,
+            ] : null,
             'notes' => $branch->operatorNotes
                 ->sortByDesc('created_at')
                 ->values()

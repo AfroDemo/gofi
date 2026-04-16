@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { formatDateTime } from '@/lib/formatters';
+import { router } from '@inertiajs/react';
 import { FormEvent } from 'react';
 
 interface NoteAuthor {
@@ -17,10 +18,20 @@ export interface FollowUpNoteRow {
     author: NoteAuthor | null;
 }
 
+interface FollowUpOwner {
+    assigned_at: string | null;
+    owned_by_viewer: boolean;
+    assigned_user: NoteAuthor | null;
+    assigned_by: NoteAuthor | null;
+}
+
 interface FollowUpNotesPanelProps {
     title: string;
     description: string;
     notes: FollowUpNoteRow[];
+    followUp?: FollowUpOwner | null;
+    takeOwnershipHref: string;
+    releaseOwnershipHref: string;
     note: string;
     onNoteChange: (value: string) => void;
     onSubmit: (event: FormEvent) => void;
@@ -33,6 +44,9 @@ export function FollowUpNotesPanel({
     title,
     description,
     notes,
+    followUp = null,
+    takeOwnershipHref,
+    releaseOwnershipHref,
     note,
     onNoteChange,
     onSubmit,
@@ -47,6 +61,71 @@ export function FollowUpNotesPanel({
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                <div className="border-border/60 rounded-2xl border px-4 py-4">
+                    <p className="font-medium">Current owner</p>
+                    {followUp ? (
+                        <>
+                            <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                {followUp.assigned_user?.name || 'Unknown operator'}
+                                {followUp.assigned_user?.email ? ` • ${followUp.assigned_user.email}` : ''}
+                            </p>
+                            <p className="text-muted-foreground mt-2 text-sm">
+                                Owned since {formatDateTime(followUp.assigned_at)}
+                                {followUp.assigned_by?.name ? ` • assigned by ${followUp.assigned_by.name}` : ''}
+                            </p>
+                            <div className="mt-4">
+                                {followUp.owned_by_viewer ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl"
+                                        onClick={() =>
+                                            router.delete(releaseOwnershipHref, {
+                                                preserveScroll: true,
+                                            })
+                                        }
+                                    >
+                                        Release ownership
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl"
+                                        onClick={() =>
+                                            router.post(takeOwnershipHref, {}, {
+                                                preserveScroll: true,
+                                            })
+                                        }
+                                    >
+                                        Take ownership
+                                    </Button>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-muted-foreground mt-2 text-sm leading-6">
+                                No operator currently owns this follow-up. Take ownership to signal that you are driving the investigation.
+                            </p>
+                            <div className="mt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="rounded-xl"
+                                    onClick={() =>
+                                        router.post(takeOwnershipHref, {}, {
+                                            preserveScroll: true,
+                                        })
+                                    }
+                                >
+                                    Take ownership
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
+
                 <form onSubmit={onSubmit} className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="follow_up_note">New note</Label>

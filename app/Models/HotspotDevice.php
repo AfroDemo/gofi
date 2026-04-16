@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class HotspotDevice extends Model
 {
@@ -52,5 +53,10 @@ class HotspotDevice extends Model
     public function operatorNotes(): MorphMany
     {
         return $this->morphMany(OperatorNote::class, 'noteable');
+    }
+
+    public function operatorFollowUp(): MorphOne
+    {
+        return $this->morphOne(OperatorFollowUp::class, 'followable');
     }
 }

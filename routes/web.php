@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\BranchFollowUpController;
 use App\Http\Controllers\BranchIndexController;
 use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\BranchNoteStoreController;
 use App\Http\Controllers\BranchShowController;
 use App\Http\Controllers\BranchStatusUpdateController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceFollowUpController;
 use App\Http\Controllers\DeviceIncidentResolveController;
 use App\Http\Controllers\DeviceIncidentStoreController;
 use App\Http\Controllers\DeviceIndexController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\SessionShowController;
 use App\Http\Controllers\SessionTerminationController;
 use App\Http\Controllers\TenantIndexController;
 use App\Http\Controllers\TenantManagementController;
+use App\Http\Controllers\TransactionFollowUpController;
 use App\Http\Controllers\TransactionIndexController;
 use App\Http\Controllers\TransactionNoteStoreController;
 use App\Http\Controllers\TransactionShowController;
@@ -53,6 +56,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('branches', [BranchManagementController::class, 'store'])->name('branches.store');
     Route::post('branches/{branch}/status', BranchStatusUpdateController::class)->name('branches.update-status');
     Route::post('branches/{branch}/notes', BranchNoteStoreController::class)->name('branches.notes.store');
+    Route::post('branches/{branch}/follow-up', [BranchFollowUpController::class, 'store'])->name('branches.follow-up.store');
+    Route::delete('branches/{branch}/follow-up', [BranchFollowUpController::class, 'destroy'])->name('branches.follow-up.destroy');
     Route::get('branches/{branch}', BranchShowController::class)->name('branches.show');
     Route::get('branches/{branch}/edit', [BranchManagementController::class, 'edit'])->name('branches.edit');
     Route::patch('branches/{branch}', [BranchManagementController::class, 'update'])->name('branches.update');
@@ -72,12 +77,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('devices/{device}/incidents', DeviceIncidentStoreController::class)->name('devices.incidents.store');
     Route::post('devices/{device}/incidents/{incident}/resolve', DeviceIncidentResolveController::class)->name('devices.incidents.resolve');
     Route::post('devices/{device}/notes', DeviceNoteStoreController::class)->name('devices.notes.store');
+    Route::post('devices/{device}/follow-up', [DeviceFollowUpController::class, 'store'])->name('devices.follow-up.store');
+    Route::delete('devices/{device}/follow-up', [DeviceFollowUpController::class, 'destroy'])->name('devices.follow-up.destroy');
     Route::get('devices/{device}', DeviceShowController::class)->name('devices.show');
     Route::get('sessions', SessionIndexController::class)->name('sessions.index');
     Route::post('sessions/{session}/terminate', SessionTerminationController::class)->name('sessions.terminate');
     Route::get('sessions/{session}', SessionShowController::class)->name('sessions.show');
     Route::get('transactions', TransactionIndexController::class)->name('transactions.index');
     Route::post('transactions/{transaction}/notes', TransactionNoteStoreController::class)->name('transactions.notes.store');
+    Route::post('transactions/{transaction}/follow-up', [TransactionFollowUpController::class, 'store'])->name('transactions.follow-up.store');
+    Route::delete('transactions/{transaction}/follow-up', [TransactionFollowUpController::class, 'destroy'])->name('transactions.follow-up.destroy');
     Route::post('transactions/{transaction}/refresh-status', TransactionStatusRefreshController::class)->name('transactions.refresh-status');
     Route::get('transactions/{transaction}', TransactionShowController::class)->name('transactions.show');
 });

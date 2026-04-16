@@ -32,6 +32,9 @@ class TransactionShowController extends Controller
                 'hotspotSessions.branch:id,name',
                 'hotspotSessions.accessPackage:id,name',
                 'ledgerEntries:id,tenant_id,transaction_id,direction,entry_type,amount,currency,balance_after,description,posted_at',
+                'operatorFollowUp:id,tenant_id,branch_id,assigned_user_id,assigned_by_user_id,followable_type,followable_id,assigned_at',
+                'operatorFollowUp.assignedUser:id,name,email',
+                'operatorFollowUp.assignedBy:id,name,email',
                 'operatorNotes:id,tenant_id,branch_id,user_id,note,noteable_id,noteable_type,created_at',
                 'operatorNotes.author:id,name,email',
             ])
@@ -138,6 +141,18 @@ class TransactionShowController extends Controller
                         'description' => $entry->description,
                         'posted_at' => $entry->posted_at?->toIso8601String(),
                     ]),
+                'follow_up' => $transaction->operatorFollowUp ? [
+                    'assigned_at' => $transaction->operatorFollowUp->assigned_at?->toIso8601String(),
+                    'owned_by_viewer' => $transaction->operatorFollowUp->assigned_user_id === $request->user()?->id,
+                    'assigned_user' => $transaction->operatorFollowUp->assignedUser ? [
+                        'name' => $transaction->operatorFollowUp->assignedUser->name,
+                        'email' => $transaction->operatorFollowUp->assignedUser->email,
+                    ] : null,
+                    'assigned_by' => $transaction->operatorFollowUp->assignedBy ? [
+                        'name' => $transaction->operatorFollowUp->assignedBy->name,
+                        'email' => $transaction->operatorFollowUp->assignedBy->email,
+                    ] : null,
+                ] : null,
                 'notes' => $transaction->operatorNotes
                     ->sortByDesc('created_at')
                     ->values()

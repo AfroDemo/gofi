@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Transaction extends Model
 {
@@ -101,5 +102,10 @@ class Transaction extends Model
     public function operatorNotes(): MorphMany
     {
         return $this->morphMany(OperatorNote::class, 'noteable');
+    }
+
+    public function operatorFollowUp(): MorphOne
+    {
+        return $this->morphOne(OperatorFollowUp::class, 'followable');
     }
 }

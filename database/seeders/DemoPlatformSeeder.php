@@ -25,6 +25,7 @@ use App\Models\DeviceIncident;
 use App\Models\HotspotDevice;
 use App\Models\HotspotSession;
 use App\Models\LedgerEntry;
+use App\Models\OperatorFollowUp;
 use App\Models\OperatorNote;
 use App\Models\PaymentCallback;
 use App\Models\Payout;
@@ -533,6 +534,42 @@ class DemoPlatformSeeder extends Seeder
             'note' => 'Customer says they approved the prompt, but callback has not landed yet. Re-checking provider status after branch power issue is resolved.',
             'created_at' => $now->copy()->subMinutes(40),
             'updated_at' => $now->copy()->subMinutes(40),
+        ]);
+
+        OperatorFollowUp::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $mwenge->id,
+            'assigned_user_id' => $coastOperator->id,
+            'assigned_by_user_id' => $coastOwner->id,
+            'followable_type' => Branch::class,
+            'followable_id' => $mwenge->id,
+            'assigned_at' => $now->copy()->subMinutes(110),
+            'created_at' => $now->copy()->subMinutes(110),
+            'updated_at' => $now->copy()->subMinutes(110),
+        ]);
+
+        OperatorFollowUp::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $mwenge->id,
+            'assigned_user_id' => $coastOperator->id,
+            'assigned_by_user_id' => $coastOwner->id,
+            'followable_type' => HotspotDevice::class,
+            'followable_id' => $mwengeRouter->id,
+            'assigned_at' => $now->copy()->subMinutes(90),
+            'created_at' => $now->copy()->subMinutes(90),
+            'updated_at' => $now->copy()->subMinutes(90),
+        ]);
+
+        OperatorFollowUp::create([
+            'tenant_id' => $coastTenant->id,
+            'branch_id' => $mwenge->id,
+            'assigned_user_id' => $coastOwner->id,
+            'assigned_by_user_id' => $coastOwner->id,
+            'followable_type' => Transaction::class,
+            'followable_id' => $coastPending->id,
+            'assigned_at' => $now->copy()->subMinutes(35),
+            'created_at' => $now->copy()->subMinutes(35),
+            'updated_at' => $now->copy()->subMinutes(35),
         ]);
 
         $coastPayout = Payout::create([
